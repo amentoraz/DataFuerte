@@ -28,6 +28,7 @@ EXIT;
 
 You will need at least:
 
+```ini
 APP_NAME=Datafuerte
 APP_URL=http://datafuerte.local
 
@@ -46,7 +47,7 @@ SEED_USER_PASSWORD=password
 # More stuff you may want to configure according to your domain
 APP_URL=http://datafuerte.local
 SESSION_DOMAIN=datafuerte.local
-
+```
 
 
 ### 3. Generate your APP KEY
