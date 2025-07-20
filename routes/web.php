@@ -26,7 +26,8 @@ Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/', [LoginController::class, 'login']);
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/myaccount', [AccountController::class, 'index'])->name('account');
+    Route::get('/myaccount/passwords', [AccountController::class, 'passwords'])->name('account.passwords');
+    Route::get('/myaccount/texts', [AccountController::class, 'texts'])->name('account.texts');
 });
 
 
