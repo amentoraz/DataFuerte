@@ -38,12 +38,14 @@ DB_DATABASE=datafuerte
 DB_USERNAME=your_user
 DB_PASSWORD=your_pass
 
-SANCTUM_STATEFUL_DOMAINS=localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1,datafuerte.local
-
 # This will be the data for your admin user
 SEED_USER_NAME=administrator
 SEED_USER_EMAIL=admin@example.com
 SEED_USER_PASSWORD=password
+
+# More stuff you may want to configure according to your domain
+APP_URL=http://datafuerte.local
+SESSION_DOMAIN=datafuerte.local
 
 
 

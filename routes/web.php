@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;  
+use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Auth\LoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,9 +16,21 @@ use Illuminate\Http\Request;
 |
 */
 
+/*
 Route::get('/', function () {
     return ['Laravel' => app()->version()];
 });
+*/
+
+Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/', [LoginController::class, 'login']);
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/myaccount', [AccountController::class, 'index'])->name('account');
+});
+
+
+
 
 
 // Return current user
