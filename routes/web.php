@@ -27,7 +27,12 @@ Route::post('/', [LoginController::class, 'login']);
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/myaccount/passwords', [AccountController::class, 'passwords'])->name('account.passwords');
+    Route::post('/myaccount/passwords/store', [AccountController::class, 'storePassword'])->name('passwords.store');
+    Route::delete('/myaccount/passwords/{id}', [AccountController::class, 'deletePassword'])->name('passwords.delete');
+
     Route::get('/myaccount/texts', [AccountController::class, 'texts'])->name('account.texts');
+    Route::post('/myaccount/texts/store', [AccountController::class, 'storeText'])->name('texts.store');
+    Route::delete('/myaccount/texts/{id}', [AccountController::class, 'deleteText'])->name('texts.delete');
 });
 
 

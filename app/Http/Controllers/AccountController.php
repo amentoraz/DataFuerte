@@ -20,6 +20,31 @@ class AccountController extends Controller
 
     }
 
+
+    public function storePassword(Request $request)
+    {
+        $request->validate([
+            'key' => 'required|string|max:255',
+        ]);
+
+        $password = new Password();
+        $password->key = $request->key;
+        $password->content = "";
+        $password->user_id = $request->user()->id;
+        $password->save();
+
+        return redirect()->route('account.passwords');
+    }
+
+
+    public function deletePassword(Request $request, $id)
+    {
+        $password = Password::find($id);
+        $password->delete();
+        return redirect()->route('account.passwords')->with('success', 'Password removed.');;
+    }
+
+
     public function texts(Request $request)
     {
         $texts = Text::with('user')->paginate(10); 
@@ -28,5 +53,27 @@ class AccountController extends Controller
         $activeTab = 'texts';
 
         return view('account.texts', compact('texts', 'user', 'activeTab'));
+    }
+
+    public function storeText(Request $request)
+    {
+        $request->validate([
+            'key' => 'required|string|max:255',
+        ]);
+
+        $text = new Text();
+        $text->key = $request->key;
+        $text->content = "";
+        $text->user_id = $request->user()->id;
+        $text->save();
+
+        return redirect()->route('account.texts');
+    }
+
+    public function deleteText(Request $request, $id)
+    {
+        $text = Text::find($id);
+        $text->delete();
+        return redirect()->route('account.texts')->with('success', 'Text removed.');;
     }
 }

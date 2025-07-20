@@ -3,6 +3,10 @@
 A secure system for managing personal keys via a web server.
 
 ---
+⚠️ **Basic functionality still on development** ⚠️
+---
+
+
 
 ## 🛠 How to install
 
