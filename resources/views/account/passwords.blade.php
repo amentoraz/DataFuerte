@@ -358,6 +358,14 @@
             decryptedPasswordInput.value = '';
             viewMasterKeyInput.value = '';
         }
+        
+        function validateBase64(str) {
+            try {
+                return btoa(atob(str)) === str;
+            } catch (e) {
+                return false;
+            }
+        }
 
         // Close modal when clicking outside of it
         viewModal.addEventListener('click', function(event) {
@@ -392,6 +400,11 @@
                     };
                     decryptedPasswordInput.value = ''; // Clean loading message
 
+                    // Validate base64
+                    if (!validateBase64(currentPasswordData.content) || !validateBase64(currentPasswordData.iv) || !validateBase64(currentPasswordData.salt)) {
+                        throw new Error("Invalid base64 data");
+                    }
+
                 } catch (error) {
                     console.error('Error fetching password data:', error);
                     decryptedPasswordInput.value = "❌ Error loading password data.";
@@ -418,6 +431,10 @@
             try {
                 const decrypted = await decryptData(content, masterKey, iv, salt);
                 decryptedPasswordInput.value = `${decrypted}`;
+                // Clean master key input as soon as we have the decrypted password
+                masterKeyInput.value = '';
+                // Force garbage collection
+                if (window.gc) window.gc();
 
                 // Start the countdown
                 clearInterval(countdownTimer); 
