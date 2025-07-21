@@ -174,7 +174,6 @@
 
 
 
-        <!-- Add Password Modal -->
         <div id="modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-lg p-6 w-96">
                 <h3 class="text-lg font-semibold mb-4 text-gray-900">Enter Master Key</h3>
@@ -187,7 +186,6 @@
             </div>
         </div>
 
-        <!-- Show Password Modal -->
         <div id="viewModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
             <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
                 <h3 class="text-lg font-bold mb-4">View password</h3>
@@ -226,13 +224,15 @@
 
 @endsection
 
-
-
 @section('scripts_extra')
     {{-- Font Awesome for Icons --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" xintegrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <script>
+
+    <script type="module">
+        // Import functions from the utility file
+        import { encryptData, decryptData, validateBase64 } from '{{ asset('js/encryptionUtils.js') }}';
+
         document.addEventListener('DOMContentLoaded', function () {
             const deleteButtons = document.querySelectorAll('.delete-button');
             const modal = document.getElementById('deleteConfirmationModal');
@@ -242,9 +242,7 @@
             deleteButtons.forEach(button => {
                 button.addEventListener('click', function () {
                     const passwordId = this.dataset.id;
-                    // Update the form action to the correct delete route
-                    // Assuming your delete route is something like /passwords/{id}
-                    deleteForm.action = `/myaccount/passwords/${passwordId}`; // Adjust this route if necessary
+                    deleteForm.action = `/myaccount/passwords/${passwordId}`;
                     modal.classList.remove('hidden');
                 });
             });
@@ -253,29 +251,26 @@
                 modal.classList.add('hidden');
             });
 
-            // Close modal when clicking outside of it
             modal.addEventListener('click', function (event) {
                 if (event.target === modal) {
                     modal.classList.add('hidden');
                 }
             });
         });
-    </script>
 
-
-    <script>
+        // --- Add Password (Encryption) Logic ---
         const form = document.getElementById("passwordForm");
-        const modal = document.getElementById("modal");
+        const encryptionModal = document.getElementById("modal"); // Renamed to avoid conflict
         const masterKeyInput = document.getElementById("masterKey");
 
         form.addEventListener("submit", (e) => {
-            e.preventDefault(); // prevent automatic submission
-            modal.classList.remove("hidden");
+            e.preventDefault();
+            encryptionModal.classList.remove("hidden");
             masterKeyInput.focus();
         });
 
         document.getElementById("cancelModal").addEventListener("click", () => {
-            modal.classList.add("hidden");
+            encryptionModal.classList.add("hidden");
             masterKeyInput.value = '';
         });
 
@@ -283,90 +278,53 @@
             const plaintext = document.getElementById("passwordPlain").value;
             const passphrase = masterKeyInput.value;
 
-            if (!passphrase || !plaintext) return alert("Both fields are required");
+            if (!passphrase || !plaintext) {
+                alert("Both fields are required.");
+                return;
+            }
 
-            const salt = crypto.getRandomValues(new Uint8Array(16));
-            const iv = crypto.getRandomValues(new Uint8Array(12));
+            try {
+                const { encryptedData, iv, salt } = await encryptData(plaintext, passphrase);
 
-            const keyMaterial = await crypto.subtle.importKey(
-                "raw",
-                new TextEncoder().encode(passphrase),
-                { name: "PBKDF2" },
-                false,
-                ["deriveKey"]
-            );
+                document.getElementById("passwordEncrypted").value = encryptedData;
+                document.querySelector("input[name='iv']").value = iv;
+                document.querySelector("input[name='salt']").value = salt;
 
-            const key = await crypto.subtle.deriveKey(
-                {
-                    name: "PBKDF2",
-                    salt: salt,
-                    iterations: 100000,
-                    hash: "SHA-256"
-                },
-                keyMaterial,
-                { name: "AES-GCM", length: 256 },
-                false,
-                ["encrypt"]
-            );
-
-            const encrypted = await crypto.subtle.encrypt(
-                { name: "AES-GCM", iv: iv },
-                key,
-                new TextEncoder().encode(plaintext)
-            );
-
-            // Encode to base64
-            const toBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
-
-            document.getElementById("passwordEncrypted").value = toBase64(encrypted);
-            document.querySelector("input[name='iv']").value = toBase64(iv);
-            document.querySelector("input[name='salt']").value = toBase64(salt);
-
-            // Clean plaintext input
-            document.getElementById("passwordPlain").value = '';
-            masterKeyInput.value = '';
-            modal.classList.add("hidden");
-            form.submit();
+                // Clean plaintext input and master key
+                document.getElementById("passwordPlain").value = '';
+                masterKeyInput.value = '';
+                encryptionModal.classList.add("hidden");
+                form.submit();
+            } catch (error) {
+                console.error("Encryption error:", error);
+                alert("Error encrypting password. Please try again.");
+            }
         });
-    </script>
 
-
-
-
-
-    <!-- Show Password -->
-    <script>
+        // --- Show Password (Decryption) Logic ---
         const viewButtons = document.querySelectorAll('.view-button');
         const viewModal = document.getElementById('viewModal');
         const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
         const decryptBtn = document.getElementById('decryptBtn');
         const decryptedPasswordInput = document.getElementById('decryptedPasswordInput'); 
-        const copyPasswordBtn = document.getElementById('copyPasswordBtn'); // Nuevo botón de copiar       
+        const copyPasswordBtn = document.getElementById('copyPasswordBtn');       
         const countdownDisplay = document.getElementById('countdown'); 
 
-        let currentPasswordData = {}; // Object to store content, iv, salt obtained by AJAX
-        let countdownTimer; // To store the timer ID
+        let currentPasswordData = {};
+        let countdownTimer;
 
         // Clean everything when closing modal
-        function closeModal() {
+        window.closeModal = function() { // Make it global so onclick in HTML can call it
             viewModal.classList.add('hidden');
             viewMasterKeyInput.value = '';
-            currentPasswordData = {}; // Clean data before closing modal
-            clearInterval(countdownTimer); // Clear any active timer
-            countdownDisplay.textContent = ''; // Clear countdown text
+            currentPasswordData = {};
+            clearInterval(countdownTimer);
+            countdownDisplay.textContent = '';
             copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
             decryptedPasswordInput.value = '';
             viewMasterKeyInput.value = '';
         }
         
-        function validateBase64(str) {
-            try {
-                return btoa(atob(str)) === str;
-            } catch (e) {
-                return false;
-            }
-        }
-
         // Close modal when clicking outside of it
         viewModal.addEventListener('click', function(event) {
             if (event.target === viewModal) {
@@ -377,32 +335,27 @@
         viewButtons.forEach(button => {
             button.addEventListener('click', async () => {
                 const passwordId = button.dataset.id;
-                //decryptedPasswordInput.value = 'Loading...'; // Mensaje de carga en el input
                 viewModal.classList.remove('hidden');
-                // Reset interval when opening modal
                 clearInterval(countdownTimer); 
                 countdownDisplay.textContent = '';
-
+                decryptedPasswordInput.value = ''; // Clear previous decrypted password
+                viewMasterKeyInput.value = ''; // Clear master key input
 
                 try {
-                    // AJAX call to retrieve password data
-                    const response = await fetch(`/myaccount/passwords/${passwordId}`); // Usamos la ruta definida
+                    const response = await fetch(`/myaccount/passwords/${passwordId}`);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const data = await response.json();
 
-                    // Save data in currentPasswordData
                     currentPasswordData = {
                         content: data.content,
                         iv: data.iv,
                         salt: data.salt
                     };
-                    decryptedPasswordInput.value = ''; // Clean loading message
 
-                    // Validate base64
                     if (!validateBase64(currentPasswordData.content) || !validateBase64(currentPasswordData.iv) || !validateBase64(currentPasswordData.salt)) {
-                        throw new Error("Invalid base64 data");
+                        throw new Error("Invalid base64 data received.");
                     }
 
                 } catch (error) {
@@ -420,7 +373,6 @@
                 return;
             }
 
-            // Use data from currentPasswordData
             const { content, iv, salt } = currentPasswordData;
 
             if (!content || !iv || !salt) {
@@ -430,13 +382,10 @@
 
             try {
                 const decrypted = await decryptData(content, masterKey, iv, salt);
-                decryptedPasswordInput.value = `${decrypted}`;
-                // Clean master key input as soon as we have the decrypted password
-                masterKeyInput.value = '';
-                // Force garbage collection
-                if (window.gc) window.gc();
+                decryptedPasswordInput.value = decrypted;
+                viewMasterKeyInput.value = ''; // Clear master key input
+                if (window.gc) window.gc(); // Force garbage collection if available
 
-                // Start the countdown
                 clearInterval(countdownTimer); 
                 let timeLeft = 10;
                 countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
@@ -448,67 +397,26 @@
                     if (timeLeft <= 0) {
                         closeModal();
                     }
-                }, 1000); // Update every second
+                }, 1000);
             } catch (e) {
                 console.error("Error during decryption:", e);
                 decryptedPasswordInput.value = "❌ Incorrect master key or corrupted data.";
                 clearInterval(countdownTimer); 
-                countdownDisplay.textContent = ``;
+                countdownDisplay.textContent = '';
             }
         });
 
-        async function decryptData(ciphertextB64, masterKey, ivB64, saltB64) {
-            const encoder = new TextEncoder();
-            const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
-            const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
-            const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
-
-            const keyMaterial = await crypto.subtle.importKey(
-                "raw",
-                encoder.encode(masterKey),
-                { name: "PBKDF2" },
-                false,
-                ["deriveKey"]
-            );
-            const key = await crypto.subtle.deriveKey(
-                {
-                    name: "PBKDF2",
-                    salt: salt,
-                    iterations: 100000,
-                    hash: "SHA-256"
-                },
-                keyMaterial,
-                { name: "AES-GCM", length: 256 },
-                false,
-                ["decrypt"]
-            );
-            const decrypted = await crypto.subtle.decrypt(
-                { name: "AES-GCM", iv: iv },
-                key,
-                ciphertext
-            );
-            return new TextDecoder().decode(decrypted);
-        }
-
-
-
         copyPasswordBtn.addEventListener('click', async () => {
             try {
-                // Correctly access the value of the input field
                 await navigator.clipboard.writeText(decryptedPasswordInput.value);
-                // Optionally provide user feedback
                 copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
                 setTimeout(() => {
                     copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
-                }, 2000); // Reset icon after 2 seconds
+                }, 2000);
             } catch (err) {
                 console.error('Failed to copy text: ', err);
                 alert('Failed to copy password. Please try again or copy manually.');
             }
         });
     </script>
-
-
-
-
 @endsection

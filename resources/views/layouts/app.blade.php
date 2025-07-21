@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Mi Aplicación Laravel')</title> {{-- Título dinámico con un valor por defecto --}}
     <script src="https://cdn.tailwindcss.com"></script>
+    {{-- Import the new encryption utility file --}}
+    <script type="module" src="{{ asset('js/encryptionUtils.js') }}"></script>
     
     @yield('head_extra') 
 </head>
