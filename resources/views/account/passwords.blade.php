@@ -347,13 +347,16 @@
         let currentPasswordData = {}; // Object to store content, iv, salt obtained by AJAX
         let countdownTimer; // To store the timer ID
 
+        // Clean everything when closing modal
         function closeModal() {
             viewModal.classList.add('hidden');
-            decryptedPasswordDisplay.textContent = '';
             viewMasterKeyInput.value = '';
             currentPasswordData = {}; // Clean data before closing modal
             clearInterval(countdownTimer); // Clear any active timer
             countdownDisplay.textContent = ''; // Clear countdown text
+            copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
+            decryptedPasswordInput.value = '';
+            viewMasterKeyInput.value = '';
         }
 
         // Close modal when clicking outside of it
@@ -366,7 +369,7 @@
         viewButtons.forEach(button => {
             button.addEventListener('click', async () => {
                 const passwordId = button.dataset.id;
-                decryptedPasswordInput.value = 'Loading...'; // Mensaje de carga en el input
+                //decryptedPasswordInput.value = 'Loading...'; // Mensaje de carga en el input
                 viewModal.classList.remove('hidden');
                 // Reset interval when opening modal
                 clearInterval(countdownTimer); 
