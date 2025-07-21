@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Clave foránea a la tabla users
             $table->string('key'); // Columna para el string "key"
             $table->binary('content'); // Columna para el BLOB "content"
+            $table->binary('iv'); // Columna para el BLOB "iv"
+            $table->binary('salt'); // Columna para el BLOB "salt"
             $table->timestamps(); // Columnas created_at y updated_at
         });
 

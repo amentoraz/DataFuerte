@@ -2,6 +2,8 @@
 
 A secure system for managing personal keys via a web server.
 
+Please note this won't work without HTTPS, since it uses WebCrypto.
+
 ---
 ⚠️ **Basic functionality still on development** ⚠️
 ---
@@ -78,8 +80,72 @@ From the root directory
 php artisan migrate
 ```
 
-### 6 Run seeders to create first admin user
+### 6. Run seeders to create first admin user
 
 ```bash
 php artisan db:seed
+```
+
+
+### 7. Configure HTTPS domain
+
+Browsers do not allow WebCrypto in HTTP without SSL.
+
+You may want to create your own self-signed certificate by doing:
+
+```bash
+mkdir -p ~/ssl && cd ~/ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout datafuerte.local.key -out datafuerte.local.crt \
+  -subj "/CN=datafuerte.local"
+```
+
+## 7.1. Apache
+
+Then configuring your apache2/sites-available/datafuerte.local.conf file like:
+
+```ini
+<VirtualHost *:443>
+
+    ServerName datafuerte.local
+
+    SSLEngine on
+    SSLCertificateFile /home/myuser/ssl/datafuerte.local.crt
+    SSLCertificateKeyFile /home/myuser/ssl/datafuerte.local.key
+
+        DocumentRoot /var/www/datafuerte/public
+        <Directory /var/www/datafuerte/public>
+                Options FollowSymLinks
+                AllowOverride All
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/datafuerte_error.log
+    CustomLog ${APACHE_LOG_DIR}/datafuerte_access.log combined
+
+</VirtualHost>
+```
+
+Don't forget to 
+
+```ini
+a2enmod ssl
+```
+
+## 7.2. Nginx
+
+Otherwise, if you're using nginx, you may want to do
+
+```ini
+server {
+    listen 443 ssl;
+    server_name localhost;
+
+    ssl_certificate     /home/myuser/ssl/datafuerte.local.crt
+    ssl_certificate_key /home/myuser/ssl/datafuerte.local.key
+
+    root /var/www/datafuerte/public;
+    ...
+}
 ```

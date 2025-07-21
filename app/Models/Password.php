@@ -19,6 +19,8 @@ class Password extends Model
         'user_id',
         'key',
         'content',
+        'iv',
+        'salt',
     ];
 
     /**

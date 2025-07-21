@@ -23,13 +23,24 @@ class AccountController extends Controller
 
     public function storePassword(Request $request)
     {
+        //var_dump($request->all());
+        //exit;
+        try {
         $request->validate([
             'key' => 'required|string|max:255',
+            'passwordEncrypted' => 'required|string',
+            'iv' => 'required|string',
+            'salt' => 'required|string',
         ]);
+        } catch (\Exception $e) {
+            return redirect()->route('account.passwords')->with('error', 'Error adding password: ' . $e->getMessage());
+        }
 
         $password = new Password();
         $password->key = $request->key;
-        $password->content = "";
+        $password->content = $request->passwordEncrypted;
+        $password->iv = $request->iv;
+        $password->salt = $request->salt;
         $password->user_id = $request->user()->id;
         $password->save();
 

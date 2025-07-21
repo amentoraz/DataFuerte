@@ -11,6 +11,10 @@
     <div class="container mx-auto">
         
 
+    <button id="test-encryption" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        Test Encryption
+    </button>
+
         <h1 class="text-3xl font-bold mb-6 text-gray-800 pt-6">List of Passwords</h1>
     
         @if (session('success'))
@@ -26,9 +30,23 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline">{{ session('error') }}</span>
+                <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
+                    <svg class="fill-current h-6 w-6 text-green-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="this.parentElement.parentElement.style.display='none';">
+                        <title>Cerrar</title>
+                        <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 2.65a1.2 1.2 0 1 1-1.697-1.697L8.303 10l-2.651-2.651a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-2.651a1.2 1.2 0 1 1 1.697 1.697L11.697 10l2.651 2.651a1.2 1.2 0 0 1 0 1.698z"/>
+                    </svg>
+                </span>
+            </div>
+        @endif
+
+
 
         @if ($passwords->isEmpty())
-            <p class="text-gray-600">There are no passwords registered yet.</p>
+            <p class="text-red-600 pb-4">There are no passwords registered yet.</p>
         @else
             <div class="overflow-x-auto bg-white shadow-md rounded-lg">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -76,6 +94,15 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button type="button"
                                             data-id="{{ $password->id }}"
+                                            data-content="{{ $password->content }}"
+                                            data-iv="{{ $password->iv }}"
+                                            data-salt="{{ $password->salt }}"
+                                            class="text-blue-600 hover:text-blue-900 view-button p-2 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+
+                                    <button type="button"
+                                            data-id="{{ $password->id }}"
                                             class="text-red-600 hover:text-red-900 delete-button p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-trash-alt"></i> {{-- Font Awesome delete icon --}}
                                     </button>
@@ -94,14 +121,23 @@
 
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Password</h2>
-            <form action="{{ route('passwords.store') }}" method="POST">
+            <form id="passwordForm" action="{{ route('passwords.store') }}" method="POST">
                 @csrf
                 <div class="mb-4">
-                    <label for="key" class="block text-gray-700 text-sm font-bold mb-2">Key:</label>
-                    <input type="text" name="key" id="key" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                    <label for="key" class="block text-gray-700 text-sm font-bold mb-2">Key (name to identify the site & account):</label>
+                    <input type="text" name="key" id="key" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
                 </div>
+                <div class="mb-4">
+                    <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Site Password:</label>
+                    <input type="text" id="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                </div>
+
+                <input type="hidden" name="passwordEncrypted" id="passwordEncrypted">
+                <input type="hidden" name="iv">
+                <input type="hidden" name="salt">
+
                 <div class="flex items-center justify-between">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                         Add Password
                     </button>
                 </div>
@@ -139,6 +175,38 @@
             </div>
         </div>
 
+
+
+        <!-- Add Password Modal -->
+        <div id="modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+                <h3 class="text-lg font-semibold mb-4 text-gray-900">Enter Master Key</h3>
+                <input type="password" id="masterKey" class="w-full border rounded p-2 mb-4" 
+                    autocomplete="new-password" aria-autocomplete="none" value="">
+                <div class="flex justify-end">
+                    <button id="cancelModal" class="mr-2 px-4 py-2 text-gray-600">Cancel</button>
+                    <button id="confirmEncryption" class="bg-blue-500 text-white px-4 py-2 rounded">Encrypt & Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Show Password Modal -->
+        <div id="viewModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h3 class="text-lg font-bold mb-4">View password</h3>
+                <label class="block mb-2 text-sm text-gray-600">Enter master key:</label>
+                <input id="viewMasterKeyInput" type="password" class="w-full p-2 border rounded mb-4" placeholder="Master key"
+                    autocomplete="new-password" aria-autocomplete="none" value="">
+
+                <button id="decryptBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Decrypt
+                </button>
+
+                <div id="decryptedPassword" class="mt-4 text-gray-800 break-all"></div>
+
+                <button onclick="closeModal()" class="mt-4 text-sm text-red-500 hover:underline">Close</button>
+            </div>
+        </div>
 
 
     </div>
@@ -181,4 +249,151 @@
             });
         });
     </script>
+
+
+    <script>
+        const form = document.getElementById("passwordForm");
+        const modal = document.getElementById("modal");
+        const masterKeyInput = document.getElementById("masterKey");
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault(); // prevenimos envío automático
+            modal.classList.remove("hidden");
+            masterKeyInput.focus();
+        });
+
+        document.getElementById("cancelModal").addEventListener("click", () => {
+            modal.classList.add("hidden");
+            masterKeyInput.value = '';
+        });
+
+        document.getElementById("confirmEncryption").addEventListener("click", async () => {
+            const plaintext = document.getElementById("passwordPlain").value;
+            const passphrase = masterKeyInput.value;
+
+            if (!passphrase || !plaintext) return alert("Both fields are required");
+
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+
+            const keyMaterial = await crypto.subtle.importKey(
+                "raw",
+                new TextEncoder().encode(passphrase),
+                { name: "PBKDF2" },
+                false,
+                ["deriveKey"]
+            );
+
+            const key = await crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt: salt,
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["encrypt"]
+            );
+
+            const encrypted = await crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                new TextEncoder().encode(plaintext)
+            );
+
+            // Codificar a base64
+            const toBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+
+            document.getElementById("passwordEncrypted").value = toBase64(encrypted);
+            document.querySelector("input[name='iv']").value = toBase64(iv);
+            document.querySelector("input[name='salt']").value = toBase64(salt);
+
+            // Limpiar input plano
+            document.getElementById("passwordPlain").value = '';
+            masterKeyInput.value = '';
+            modal.classList.add("hidden");
+            form.submit();
+        });
+    </script>
+
+
+
+
+
+    <!-- Show Password -->
+    <script>
+        const viewButtons = document.querySelectorAll('.view-button');
+        const viewModal = document.getElementById('viewModal');
+        const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
+        const decryptBtn = document.getElementById('decryptBtn');
+        const decryptedPassword = document.getElementById('decryptedPassword');
+
+        let currentContent, currentIv, currentSalt;
+
+        function closeModal() {
+            viewModal.classList.add('hidden');
+            decryptedPassword.textContent = '';
+            viewMasterKeyInput.value = '';
+        }
+
+        viewButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                currentContent = button.dataset.content;
+                currentIv = button.dataset.iv;
+                currentSalt = button.dataset.salt;
+                viewModal.classList.remove('hidden');
+            });
+        });
+
+        decryptBtn.addEventListener('click', async () => {
+            const masterKey = viewMasterKeyInput.value;
+
+            try {
+                const decrypted = await decryptData(currentContent, masterKey, currentIv, currentSalt);
+                decryptedPassword.textContent = `Contraseña: ${decrypted}`;
+            } catch (e) {
+                decryptedPassword.textContent = "❌ Clave incorrecta o datos corruptos.";
+            }
+        });
+
+        async function decryptData(ciphertextB64, masterKey, ivB64, saltB64) {
+            const encoder = new TextEncoder();
+            const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
+            const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+            const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
+            const keyMaterial = await crypto.subtle.importKey(
+                "raw",
+                encoder.encode(masterKey),
+                { name: "PBKDF2" },
+                false,
+                ["deriveKey"]
+            );
+            const key = await crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt: salt,
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["decrypt"]
+            );
+            const decrypted = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                ciphertext
+            );
+            return new TextDecoder().decode(decrypted);
+        }
+
+
+    </script>
+
+
+
+
 @endsection
