@@ -199,7 +199,21 @@
                     Decrypt
                 </button>
 
-                <div id="decryptedPassword" class="mt-4 text-gray-800 break-all"></div>
+                {{-- Decrypted password display as a read-only input --}}
+                <div class="mt-4">
+                    <label for="decryptedPasswordInput" class="block mb-2 text-sm text-gray-600">Decrypted Password:</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="decryptedPasswordInput" 
+                               class="w-full p-2 border rounded text-gray-800 break-all bg-gray-50" 
+                               readonly>
+                        <button id="copyPasswordBtn" 
+                                class="bg-gray-200 text-gray-700 px-3 py-2 rounded hover:bg-gray-300 transition duration-150 ease-in-out"
+                                title="Copy to clipboard">
+                            <i class="far fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
                 <div id="countdown" class="mt-2 text-sm text-gray-500"></div>
 
                 <button onclick="closeModal()" class="mt-4 text-sm text-red-500 hover:underline">Close</button>
@@ -326,7 +340,8 @@
         const viewModal = document.getElementById('viewModal');
         const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
         const decryptBtn = document.getElementById('decryptBtn');
-        const decryptedPasswordDisplay = document.getElementById('decryptedPassword');
+        const decryptedPasswordInput = document.getElementById('decryptedPasswordInput'); 
+        const copyPasswordBtn = document.getElementById('copyPasswordBtn'); // Nuevo botón de copiar       
         const countdownDisplay = document.getElementById('countdown'); 
 
         let currentPasswordData = {}; // Object to store content, iv, salt obtained by AJAX
@@ -341,11 +356,22 @@
             countdownDisplay.textContent = ''; // Clear countdown text
         }
 
+        // Close modal when clicking outside of it
+        viewModal.addEventListener('click', function(event) {
+            if (event.target === viewModal) {
+                closeModal();
+            }
+        });
+
         viewButtons.forEach(button => {
             button.addEventListener('click', async () => {
                 const passwordId = button.dataset.id;
-                decryptedPasswordDisplay.textContent = 'Loading...'; // Loading message
+                decryptedPasswordInput.value = 'Loading...'; // Mensaje de carga en el input
                 viewModal.classList.remove('hidden');
+                // Reset interval when opening modal
+                clearInterval(countdownTimer); 
+                countdownDisplay.textContent = '';
+
 
                 try {
                     // AJAX call to retrieve password data
@@ -361,12 +387,11 @@
                         iv: data.iv,
                         salt: data.salt
                     };
-                    decryptedPasswordDisplay.textContent = ''; // Clean loading message
+                    decryptedPasswordInput.value = ''; // Clean loading message
 
                 } catch (error) {
                     console.error('Error fetching password data:', error);
-                    decryptedPasswordDisplay.textContent = "❌ Error loading password data.";
-                    // Optional: close modal or disable decrypt button if there is an error
+                    decryptedPasswordInput.value = "❌ Error loading password data.";
                 }
             });
         });
@@ -375,7 +400,7 @@
             const masterKey = viewMasterKeyInput.value;
 
             if (!masterKey) {
-                decryptedPasswordDisplay.textContent = "Please enter the master key.";
+                decryptedPasswordInput.value = "Please enter the master key.";
                 return;
             }
 
@@ -383,18 +408,19 @@
             const { content, iv, salt } = currentPasswordData;
 
             if (!content || !iv || !salt) {
-                decryptedPasswordDisplay.textContent = "❌ Password data not available. Try again.";
+                decryptedPasswordInput.value = "❌ Password data not available. Try again.";
                 return;
             }
 
             try {
                 const decrypted = await decryptData(content, masterKey, iv, salt);
-                decryptedPasswordDisplay.textContent = `Password: ${decrypted}>`;
+                decryptedPasswordInput.value = `${decrypted}`;
 
                 // Start the countdown
+                clearInterval(countdownTimer); 
                 let timeLeft = 10;
                 countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
-                clearInterval(countdownTimer); // Clear any existing timer before starting a new one
+                
 
                 countdownTimer = setInterval(() => {
                     timeLeft--;
@@ -405,7 +431,9 @@
                 }, 1000); // Update every second
             } catch (e) {
                 console.error("Error during decryption:", e);
-                decryptedPasswordDisplay.textContent = "❌ Incorrect master key or corrupted data.";
+                decryptedPasswordInput.value = "❌ Incorrect master key or corrupted data.";
+                clearInterval(countdownTimer); 
+                countdownDisplay.textContent = ``;
             }
         });
 
@@ -441,6 +469,23 @@
             );
             return new TextDecoder().decode(decrypted);
         }
+
+
+
+        copyPasswordBtn.addEventListener('click', async () => {
+            try {
+                // Correctly access the value of the input field
+                await navigator.clipboard.writeText(decryptedPasswordInput.value);
+                // Optionally provide user feedback
+                copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
+                }, 2000); // Reset icon after 2 seconds
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy password. Please try again or copy manually.');
+            }
+        });
     </script>
 
 
