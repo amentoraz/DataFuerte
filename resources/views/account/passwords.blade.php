@@ -200,6 +200,7 @@
                 </button>
 
                 <div id="decryptedPassword" class="mt-4 text-gray-800 break-all"></div>
+                <div id="countdown" class="mt-2 text-sm text-gray-500"></div>
 
                 <button onclick="closeModal()" class="mt-4 text-sm text-red-500 hover:underline">Close</button>
             </div>
@@ -325,15 +326,19 @@
         const viewModal = document.getElementById('viewModal');
         const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
         const decryptBtn = document.getElementById('decryptBtn');
-        const decryptedPasswordDisplay = document.getElementById('decryptedPassword'); // Renombrado para claridad
+        const decryptedPasswordDisplay = document.getElementById('decryptedPassword');
+        const countdownDisplay = document.getElementById('countdown'); 
 
         let currentPasswordData = {}; // Object to store content, iv, salt obtained by AJAX
+        let countdownTimer; // To store the timer ID
 
         function closeModal() {
             viewModal.classList.add('hidden');
             decryptedPasswordDisplay.textContent = '';
             viewMasterKeyInput.value = '';
             currentPasswordData = {}; // Clean data before closing modal
+            clearInterval(countdownTimer); // Clear any active timer
+            countdownDisplay.textContent = ''; // Clear countdown text
         }
 
         viewButtons.forEach(button => {
@@ -384,7 +389,20 @@
 
             try {
                 const decrypted = await decryptData(content, masterKey, iv, salt);
-                decryptedPasswordDisplay.textContent = `Password: ${decrypted}`;
+                decryptedPasswordDisplay.textContent = `Password: ${decrypted}>`;
+
+                // Start the countdown
+                let timeLeft = 10;
+                countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
+                clearInterval(countdownTimer); // Clear any existing timer before starting a new one
+
+                countdownTimer = setInterval(() => {
+                    timeLeft--;
+                    countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
+                    if (timeLeft <= 0) {
+                        closeModal();
+                    }
+                }, 1000); // Update every second
             } catch (e) {
                 console.error("Error during decryption:", e);
                 decryptedPasswordDisplay.textContent = "❌ Incorrect master key or corrupted data.";
