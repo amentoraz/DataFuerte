@@ -8,6 +8,12 @@ use App\Models\Text;
 
 class AccountController extends Controller
 {
+
+    // *******************************************
+    //               Password zone
+    // *******************************************
+
+
     public function passwords(Request $request)
     {
         
@@ -23,8 +29,6 @@ class AccountController extends Controller
 
     public function storePassword(Request $request)
     {
-        //var_dump($request->all());
-        //exit;
         try {
         $request->validate([
             'key' => 'required|string|max:255',
@@ -55,6 +59,18 @@ class AccountController extends Controller
         return redirect()->route('account.passwords')->with('success', 'Password removed.');;
     }
 
+    public function getPasswordData($id) 
+    {
+        $password = Password::find($id);
+        // We print it in JSON
+        return response()->json($password);
+    }
+
+
+
+    // *******************************************
+    //                  Texts zone
+    // *******************************************
 
     public function texts(Request $request)
     {

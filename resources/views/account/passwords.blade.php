@@ -94,9 +94,6 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button type="button"
                                             data-id="{{ $password->id }}"
-                                            data-content="{{ $password->content }}"
-                                            data-iv="{{ $password->iv }}"
-                                            data-salt="{{ $password->salt }}"
                                             class="text-blue-600 hover:text-blue-900 view-button p-2 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -104,7 +101,7 @@
                                     <button type="button"
                                             data-id="{{ $password->id }}"
                                             class="text-red-600 hover:text-red-900 delete-button p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
-                                        <i class="fas fa-trash-alt"></i> {{-- Font Awesome delete icon --}}
+                                        <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -257,7 +254,7 @@
         const masterKeyInput = document.getElementById("masterKey");
 
         form.addEventListener("submit", (e) => {
-            e.preventDefault(); // prevenimos envío automático
+            e.preventDefault(); // prevent automatic submission
             modal.classList.remove("hidden");
             masterKeyInput.focus();
         });
@@ -303,14 +300,14 @@
                 new TextEncoder().encode(plaintext)
             );
 
-            // Codificar a base64
+            // Encode to base64
             const toBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
 
             document.getElementById("passwordEncrypted").value = toBase64(encrypted);
             document.querySelector("input[name='iv']").value = toBase64(iv);
             document.querySelector("input[name='salt']").value = toBase64(salt);
 
-            // Limpiar input plano
+            // Clean plaintext input
             document.getElementById("passwordPlain").value = '';
             masterKeyInput.value = '';
             modal.classList.add("hidden");
@@ -328,33 +325,69 @@
         const viewModal = document.getElementById('viewModal');
         const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
         const decryptBtn = document.getElementById('decryptBtn');
-        const decryptedPassword = document.getElementById('decryptedPassword');
+        const decryptedPasswordDisplay = document.getElementById('decryptedPassword'); // Renombrado para claridad
 
-        let currentContent, currentIv, currentSalt;
+        let currentPasswordData = {}; // Object to store content, iv, salt obtained by AJAX
 
         function closeModal() {
             viewModal.classList.add('hidden');
-            decryptedPassword.textContent = '';
+            decryptedPasswordDisplay.textContent = '';
             viewMasterKeyInput.value = '';
+            currentPasswordData = {}; // Clean data before closing modal
         }
 
         viewButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                currentContent = button.dataset.content;
-                currentIv = button.dataset.iv;
-                currentSalt = button.dataset.salt;
+            button.addEventListener('click', async () => {
+                const passwordId = button.dataset.id;
+                decryptedPasswordDisplay.textContent = 'Loading...'; // Loading message
                 viewModal.classList.remove('hidden');
+
+                try {
+                    // AJAX call to retrieve password data
+                    const response = await fetch(`/myaccount/passwords/${passwordId}`); // Usamos la ruta definida
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+
+                    // Save data in currentPasswordData
+                    currentPasswordData = {
+                        content: data.content,
+                        iv: data.iv,
+                        salt: data.salt
+                    };
+                    decryptedPasswordDisplay.textContent = ''; // Clean loading message
+
+                } catch (error) {
+                    console.error('Error fetching password data:', error);
+                    decryptedPasswordDisplay.textContent = "❌ Error loading password data.";
+                    // Optional: close modal or disable decrypt button if there is an error
+                }
             });
         });
 
         decryptBtn.addEventListener('click', async () => {
             const masterKey = viewMasterKeyInput.value;
 
+            if (!masterKey) {
+                decryptedPasswordDisplay.textContent = "Please enter the master key.";
+                return;
+            }
+
+            // Use data from currentPasswordData
+            const { content, iv, salt } = currentPasswordData;
+
+            if (!content || !iv || !salt) {
+                decryptedPasswordDisplay.textContent = "❌ Password data not available. Try again.";
+                return;
+            }
+
             try {
-                const decrypted = await decryptData(currentContent, masterKey, currentIv, currentSalt);
-                decryptedPassword.textContent = `Contraseña: ${decrypted}`;
+                const decrypted = await decryptData(content, masterKey, iv, salt);
+                decryptedPasswordDisplay.textContent = `Password: ${decrypted}`;
             } catch (e) {
-                decryptedPassword.textContent = "❌ Clave incorrecta o datos corruptos.";
+                console.error("Error during decryption:", e);
+                decryptedPasswordDisplay.textContent = "❌ Incorrect master key or corrupted data.";
             }
         });
 
@@ -363,6 +396,7 @@
             const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
             const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
             const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
+
             const keyMaterial = await crypto.subtle.importKey(
                 "raw",
                 encoder.encode(masterKey),
@@ -389,8 +423,6 @@
             );
             return new TextDecoder().decode(decrypted);
         }
-
-
     </script>
 
 
