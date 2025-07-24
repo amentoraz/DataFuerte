@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Password;
-use App\Models\Text;
+use App\Models\Element;
+use Illuminate\Support\Str;
 
 class AccountController extends Controller
 {
@@ -14,111 +14,116 @@ class AccountController extends Controller
     // *******************************************
 
 
-    public function passwords(Request $request)
-    {
-        // Retrieve only passwords related with current user
-        $passwords = Password::where('user_id', $request->user()->id)->paginate(10);       
+    public function elements(Request $request, $uuid = 0)
+    {        
+
+        // Retrieve all elements related with current user
+        $elements = Element::where('user_id', $request->user()->id)
+            ->where('parent', $uuid)
+            ->orderBy('key', 'asc')            
+            ->paginate(10);       
+
+        // If $uuid != 0, we are not in the root folder
+        if ($uuid != 0) {
+            // So we add the parent of the parent element to the elements array as "../"
+            $parent = Element::find($uuid);
+            if ($parent->parent == 0) {
+                $parent->key = "../";
+                $parent->uuid = 0;
+                $elements->prepend($parent);
+            } else {
+                $parentOfParent = Element::find($parent->parent);
+                $parentOfParent->key = "../";
+                $elements->prepend($parentOfParent);
+            }
+        }
 
         $user = $request->user();
-        $activeTab = 'passwords';
+        $activeTab = 'elements';
 
-        return view('account.passwords', compact('passwords', 'user', 'activeTab'));
+        return view('account.elements', compact('elements', 'user', 'uuid', 'activeTab'));
 
     }
 
 
-    public function storePassword(Request $request)
+    public function storeElement(Request $request)
     {
         try {
-        $request->validate([
-            'key' => 'required|string|max:255',
-            'passwordEncrypted' => 'required|string',
-            'iv' => 'required|string',
-            'salt' => 'required|string',
-        ]);
+            switch($request->element_type_id) {
+                case 1:
+                    $request->validate([
+                        'key' => 'required|string|max:255',
+                        'passwordEncrypted' => 'required|string',
+                        'iv' => 'required|string',
+                        'salt' => 'required|string',
+                        'hmac' => 'required|string',
+                        'parent' => 'required|uuid',
+                    ]);
+                    break;
+                case 4:
+                    $request->validate([
+                        'key' => 'required|string|max:255',
+                    ]); 
+                    break;
+                default:
+                    return redirect()->route('account.elements')->with('error', 'Invalid element type.');
+            }
         } catch (\Exception $e) {
-            return redirect()->route('account.passwords')->with('error', 'Error adding password: ' . $e->getMessage());
+            return redirect()->route('account.elements')->with('error', 'Error adding element: ' . $e->getMessage());
         }
 
-        $password = new Password();
-        $password->key = $request->key;
-        $password->content = $request->passwordEncrypted;
-        $password->iv = $request->iv;
-        $password->salt = $request->salt;
-        $password->hmac = $request->hmac;
-        $password->user_id = $request->user()->id;
-        $password->save();
+        // Create the element
+        switch($request->element_type_id) {
+            case 1:
+                $element = new Element();
+                $element->uuid = Str::uuid();
+                $element->key = $request->key;
+                $element->content = $request->passwordEncrypted;
+                $element->iv = $request->iv;
+                $element->salt = $request->salt;
+                $element->hmac = $request->hmac;
+                $element->user_id = $request->user()->id;
+                $element->element_type_id = 1;
+                $element->parent = $request->parent;
+                $element->save();
+                break;
+            case 4: 
+                $element = new Element();
+                $element->uuid = Str::uuid();
+                $element->key = $request->key;
+                $element->content = "";
+                $element->iv = "";
+                $element->salt = "";
+                $element->hmac = "";
+                $element->user_id = $request->user()->id;
+                $element->element_type_id = 4;
+                $element->parent = $request->parent;
+                $element->save();
+                break;
+        }
 
-        return redirect()->route('account.passwords');
+        return redirect()->route('account.elements', ['uuid' => $request->parent]);
     }
 
 
-    public function deletePassword(Request $request, $id)
+    public function deleteElement(Request $request, $uuid)
     {
-        $password = Password::find($id);
-        $password->delete();
-        return redirect()->route('account.passwords')->with('success', 'Password removed.');;
+        $element = Element::find($uuid);
+        $element->delete();
+        return redirect()->route('account.elements')->with('success', 'Element removed.');;
     }
 
-    public function getPasswordData(Request $request, $id) 
+    public function getElementData(Request $request, $uuid) 
     {
         // We get password data from database (only if it belongs to current user)
-        $password = Password::find($id);
-        if ($password->user_id !== $request->user()->id) {
+        $element = Element::find($uuid);
+        if ($element->user_id !== $request->user()->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         // We print it in JSON
-        return response()->json($password);
+        return response()->json($element);
     }
 
 
 
-    // *******************************************
-    //                  Texts zone
-    // *******************************************
-
-    public function texts(Request $request)
-    {
-        $texts = Text::where('user_id', $request->user()->id)->paginate(10); 
-
-        $user = $request->user();
-        $activeTab = 'texts';
-
-        return view('account.texts', compact('texts', 'user', 'activeTab'));
-    }
-
-    public function storeText(Request $request)
-    {
-        $request->validate([
-            'key' => 'required|string|max:255',
-        ]);
-
-        $text = new Text();
-        $text->key = $request->key;
-        $text->content = $request->textEncrypted;
-        $text->iv = $request->iv;
-        $text->salt = $request->salt;
-        $text->hmac = $request->hmac;
-        $text->user_id = $request->user()->id;
-        $text->save();
-
-        return redirect()->route('account.texts');
-    }
-
-    public function deleteText(Request $request, $id)
-    {
-        $text = Text::find($id);
-        $text->delete();
-        return redirect()->route('account.texts')->with('success', 'Text removed.');;
-    }
-
-    public function getTextData($id) 
-    {
-        $text = Text::find($id);
-        if ($text->user_id !== $request->user()->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-        // We print it in JSON
-        return response()->json($text);
-    }
 }

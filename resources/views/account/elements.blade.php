@@ -10,7 +10,7 @@
         
     <div class="container mx-auto">
         
-        <h1 class="text-3xl font-bold mb-6 text-gray-800 pt-6">List of Passwords</h1>
+        <h1 class="text-3xl font-bold mb-6 text-gray-800 pt-6">List of Elements</h1>
     
         @if (session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
@@ -40,7 +40,7 @@
 
 
 
-        @if ($passwords->isEmpty())
+        @if ($elements->isEmpty())
             <p class="text-red-600 pb-4">There are no passwords registered yet.</p>
         @else
             {{-- Big screens (hidden in small ones) --}}
@@ -48,117 +48,187 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Key
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Name
                             </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Created
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Type
                             </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Last Updated
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Last Modified
                             </th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
                             </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach ($passwords as $password)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $password->key }}
+                        @foreach ($elements as $element)
+                            @if ($element->element_type_id !== 4)
+                            <tr class="hover:bg-gray-50">
+                            @else 
+                            <tr class="hover:bg-gray-50 cursor-pointer" data-href="{{ route('account.elements', ['uuid' => $element->uuid]) }}">
+                            @endif
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-800 flex items-center">
+                                    @switch($element->element_type_id)
+                                        @case(1)
+                                            <i class="fas fa-key text-yellow-500 mr-2"></i>
+                                            @break
+                                        @case(4)
+                                            <i class="fas fa-folder text-blue-500 mr-2"></i>
+                                            @break
+                                    @endswitch
+                                    {{ $element->key }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $password->created_at->format('d/m/Y H:i') }}
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                                    @switch($element->element_type_id)
+                                        @case(1)
+                                            Password
+                                            @break
+                                        @case(2)
+                                            Text
+                                            @break
+                                        @case(3)
+                                            File
+                                            @break
+                                        @case(4)
+                                            Folder
+                                            @break
+                                    @endswitch
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $password->updated_at->format('d/m/Y H:i') }}
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                                    {{ $element->updated_at->format('d/m/Y H:i') }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <td class="px-4 py-2 whitespace-nowrap text-right text-sm font-medium action-buttons-cell">                           
+                                    @if ($element->element_type_id !== 4)
                                     <button type="button"
-                                            data-id="{{ $password->id }}"
-                                            class="text-blue-600 hover:text-blue-900 view-button p-2 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
+                                            data-id="{{ $element->uuid }}"
+                                            class="text-blue-600 hover:text-blue-900 view-button p-1 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-eye"></i>
                                     </button>
+                                    @endif
                                     <button type="button"
-                                            data-id="{{ $password->id }}"
-                                            class="text-red-600 hover:text-red-900 delete-button p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
+                                            data-id="{{ $element->uuid }}"
+                                            class="text-red-600 hover:text-red-900 delete-button p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </td>
                             </tr>
-                        @endforeach
+                        @endforeach                        
                     </tbody>
                 </table>
             </div>
 
+
             {{-- Small screens (hidden in big ones) --}}
-            <div class="sm:hidden grid grid-cols-1 gap-4">
-                @foreach ($passwords as $password)
-                    <div class="bg-white shadow-md rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-gray-800">Key:</span>
-                            <span class="text-gray-600">{{ $password->key }}</span>
+                <div class="sm:hidden grid grid-cols-1 gap-3">
+                    @foreach ($elements as $element)
+                        {{-- Usamos un div principal para la tarjeta que actuará como el elemento clicable para carpetas --}}
+                        @if ($element->element_type_id !== 4)
+                        <div class="bg-white shadow-md rounded-lg p-3">
+                        @else
+                        <div class="bg-white shadow-md rounded-lg p-3 cursor-pointer folder-card" data-href="{{ route('account.elements', ['uuid' => $element->uuid]) }}">
+                        @endif
+                            <div class="flex items-center mb-2">
+                                @switch($element->element_type_id)
+                                    @case(1)
+                                        <i class="fas fa-key text-yellow-500 mr-2 text-lg"></i>
+                                        @break
+                                    @case(4)
+                                        <i class="fas fa-folder text-blue-500 mr-2 text-lg"></i>
+                                        @break
+                                    {{-- Añade más casos aquí para otros tipos de elementos si los tienes --}}
+                                    @case(2)
+                                        <i class="fas fa-file-alt text-gray-500 mr-2 text-lg"></i> {{-- Ejemplo para tipo Text --}}
+                                        @break
+                                    @case(3)
+                                        <i class="fas fa-file text-gray-500 mr-2 text-lg"></i> {{-- Ejemplo para tipo File --}}
+                                        @break
+                                @endswitch
+                                <span class="font-bold text-gray-800 text-base">{{ $element->key }}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 mb-2">
+                                <span class="font-semibold">Type:</span>
+                                @switch($element->element_type_id)
+                                    @case(1)
+                                        Password
+                                        @break
+                                    @case(2)
+                                        Text
+                                        @break
+                                    @case(3)
+                                        File
+                                        @break
+                                    @case(4)
+                                        Folder
+                                        @break
+                                @endswitch
+                            </div>
+                            <div class="text-sm text-gray-600 mb-3">
+                                <span class="font-semibold">Last Modified:</span> {{ $element->updated_at->format('d/m/Y H:i') }}
+                            </div>
+                            <div class="flex justify-end space-x-2 action-buttons-card"> {{-- Nueva clase para la celda de botones --}}
+                                @if ($element->element_type_id !== 4) {{-- Los elementos que no son carpetas tienen botón de "View" --}}
+                                <button type="button"
+                                        data-id="{{ $element->uuid }}"
+                                        class="text-blue-600 hover:text-blue-900 view-button px-3 py-1 rounded-md hover:bg-blue-100 transition duration-150 ease-in-out text-sm"
+                                        onclick="event.stopPropagation()"> {{-- Detener propagación --}}
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                @endif
+                                <button type="button"
+                                        data-id="{{ $element->uuid }}"
+                                        class="text-red-600 hover:text-red-900 delete-button px-3 py-1 rounded-md hover:bg-red-100 transition duration-150 ease-in-out text-sm"
+                                        onclick="event.stopPropagation()"> {{-- Detener propagación --}}
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-gray-800">Created:</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-1">                            
-                            <span class="text-gray-600">{{ $password->created_at->format('d/m/Y H:i') }}</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-gray-800">Last Updated:</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-1">                                
-                            <span class="text-gray-600">{{ $password->updated_at->format('d/m/Y H:i') }}</span>
-                        </div>
-                        <div class="flex justify-end space-x-2">
-                            <button type="button"
-                                    data-id="{{ $password->id }}"
-                                    class="text-blue-600 hover:text-blue-900 view-button p-2 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
-                                <i class="fas fa-eye"></i> View
-                            </button>
-                            <button type="button"
-                                    data-id="{{ $password->id }}"
-                                    class="text-red-600 hover:text-red-900 delete-button p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
-                                <i class="fas fa-trash-alt"></i> Delete
-                            </button>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
+                    @endforeach
+                </div>
 
             <div class="mt-6 pb-6">
-                {{ $passwords->links() }} {{-- Show pagination links --}}
-            </div>
+                {{ $elements->links() }} {{-- Show pagination links --}}
+            </div>            
         @endif
 
+
+
+
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Password</h2>
-            <form id="passwordForm" action="{{ route('passwords.store') }}" method="POST">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Element</h2>
+            <form id="elementForm" action="{{ route('elements.store') }}" method="POST">
                 @csrf
                 <div class="mb-4">
-                    <label for="key" class="block text-gray-700 text-sm font-bold mb-2">Key (name to identify the site & account):</label>
-                    <input type="text" name="key" id="key" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                    <label for="element_type_id" class="block text-gray-700 text-sm font-bold mb-2">Type:</label>
+                    <select name="element_type_id" id="element_type_id" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                        <option value="1" selected>Password</option>
+                        <option value="4">Folder</option>
+                    </select>
                 </div>
                 <div class="mb-4">
-                    <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Site Password:</label>
-                    <input type="text" id="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                    <label for="key" id="keyLabel" class="block text-gray-700 text-sm font-bold mb-2">Element name (key):</label>
+                    <input type="text" name="key" id="key" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                </div>
+                <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
+                    <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold mb-2">Content:</label>
+                    <input type="text" id="passwordPlain" name="content" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
                 </div>
 
+                {{-- Campos ocultos para la encriptación, siempre presentes para passwords --}}
                 <input type="hidden" name="passwordEncrypted" id="passwordEncrypted">
                 <input type="hidden" name="iv">
                 <input type="hidden" name="salt">
                 <input type="hidden" name="hmac">
+                <input type="hidden" name="parent" value="{{ $uuid }}">
 
                 <div class="flex items-center justify-between">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        Add Password
+                        Add Element
                     </button>
                 </div>
             </form>
         </div>
-
 
 
         {{-- Delete Confirmation Modal --}}
@@ -172,7 +242,7 @@
                     </div>
                     <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Confirm Deletion</h3>
                     <div class="mt-2 px-7 py-3">
-                        <p class="text-sm text-gray-500">Are you sure you want to delete this password? This action cannot be undone.</p>
+                        <p class="text-sm text-gray-500">Are you sure you want to delete this element? This action cannot be undone.</p>
                     </div>
                     <div class="items-center px-4 py-3 sm:flex sm:flex-row-reverse">
                         <form id="deleteForm" method="POST" action="" class="w-full sm:ml-3 sm:w-auto">
@@ -190,8 +260,8 @@
             </div>
         </div>
 
-
-
+        
+        {{-- Add encrypted element modal --}}
         <div id="modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-[50rem]">
                 <h3 class="text-lg font-semibold mb-4 text-gray-900">Enter Master Key</h3>
@@ -204,9 +274,11 @@
             </div>
         </div>
 
+
+        {{-- View encrypted element modal --}}
         <div id="viewModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
             <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-[50rem]">
-                <h3 class="text-lg font-bold mb-4">View password</h3>
+                <h3 class="text-lg font-bold mb-4">View encrypted element</h3>
                 <label class="block mb-2 text-sm text-gray-600">Enter master key:</label>
                 <input id="viewMasterKeyInput" type="password" class="w-full p-2 border rounded mb-4" placeholder="Master key"
                     autocomplete="new-password" aria-autocomplete="none" value="">
@@ -215,9 +287,9 @@
                     Decrypt
                 </button>
 
-                {{-- Decrypted password display as a read-only input --}}
+                {{-- Decrypted element display as a read-only input --}}
                 <div class="mt-4">
-                    <label for="decryptedPasswordInput" class="block mb-2 text-sm text-gray-600">Decrypted Password:</label>
+                    <label for="decryptedPasswordInput" class="block mb-2 text-sm text-gray-600">Decrypted Element:</label>
                     <div class="flex items-center space-x-2">
                         <input type="text" id="decryptedPasswordInput" 
                                class="w-full p-2 border rounded text-gray-800 break-all bg-gray-50" 
@@ -259,8 +331,8 @@
 
             deleteButtons.forEach(button => {
                 button.addEventListener('click', function () {
-                    const passwordId = this.dataset.id;
-                    deleteForm.action = `/myaccount/passwords/${passwordId}`;
+                    const elementId = this.dataset.id;
+                    deleteForm.action = `/myaccount/elements/${elementId}`;
                     modal.classList.remove('hidden');
                 });
             });
@@ -277,11 +349,17 @@
         });
 
         // --- Add Password (Encryption) Logic ---
-        const form = document.getElementById("passwordForm");
+        const form = document.getElementById("elementForm");
         const encryptionModal = document.getElementById("modal"); // Renamed to avoid conflict
         const masterKeyInput = document.getElementById("masterKey");
 
         form.addEventListener("submit", (e) => {
+            // Send the form if its a folder
+            if (document.getElementById("element_type_id").value === "4") {
+                form.submit();
+                return;
+            }
+            // Prevent default form submission
             e.preventDefault();
             encryptionModal.classList.remove("hidden");
             masterKeyInput.focus();
@@ -353,7 +431,7 @@
 
         viewButtons.forEach(button => {
             button.addEventListener('click', async () => {
-                const passwordId = button.dataset.id;
+                const elementId = button.dataset.id;
                 viewModal.classList.remove('hidden');
                 clearInterval(countdownTimer); 
                 countdownDisplay.textContent = '';
@@ -361,7 +439,7 @@
                 viewMasterKeyInput.value = ''; // Clear master key input
 
                 try {
-                    const response = await fetch(`/myaccount/passwords/${passwordId}`);
+                    const response = await fetch(`/myaccount/elements/get/${elementId}`);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
@@ -439,4 +517,90 @@
             }
         });
     </script>
+
+
+    <script>
+        // --- Update form fields depending on the type of element ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const elementTypeSelect = document.getElementById('element_type_id');
+            const keyLabel = document.getElementById('keyLabel');
+            const contentFieldWrapper = document.getElementById('contentFieldWrapper');
+            const passwordPlainInput = document.getElementById('passwordPlain');
+
+            function updateFormFields() {
+                const selectedValue = elementTypeSelect.value;
+
+                // Type 1: Password
+                if (selectedValue === '1') {
+                    keyLabel.textContent = 'Element name (key):';
+                    contentFieldWrapper.classList.remove('hidden'); // Show content field
+                    passwordPlainInput.setAttribute('required', 'required'); // Make it required
+                    passwordPlainInput.name = 'passwordPlain'; // Ensure the name is 'passwordPlain'
+                    passwordPlainInput.id = 'passwordPlain'; // Restore the ID if necessary
+                }
+                // Type 4: Folder
+                else if (selectedValue === '4') {
+                    keyLabel.textContent = 'Folder name:'; // Change the label text
+                    contentFieldWrapper.classList.add('hidden'); // Hide the content field
+                    passwordPlainInput.removeAttribute('required'); // Not required
+                    passwordPlainInput.name = ''; // Remove the 'name' attribute so it's not sent to the server
+                    passwordPlainInput.value = ''; // Clear the value to avoid residual data
+                }
+            }
+
+            // Execute the function when the page loads to set the initial state
+            updateFormFields();
+
+            // Listen for changes in the type selector
+            elementTypeSelect.addEventListener('change', updateFormFields);
+
+        
+            // ********** Navigate through folders **********
+            // Select all rows that have the data-href attribute
+            const rows = document.querySelectorAll('tbody tr[data-href]');
+
+            rows.forEach(row => {
+                row.addEventListener('click', function(event) {
+                    // Check if the click came from an action button
+                    // event.target is the element that was clicked
+                    // event.currentTarget is the element that the event listener was attached to (the row in this case)
+                    if (event.target.closest('.action-buttons-cell')) {
+                        // If the click was inside the action cell, do nothing
+                        return;
+                    }
+
+                    // If it wasn't in the action cell, navigate to the URL
+                    const url = this.dataset.href;
+                    if (url) {
+                        window.location.href = url;
+                    }
+                });
+            });
+
+
+            const folderCards = document.querySelectorAll('.folder-card[data-href]');
+
+            folderCards.forEach(card => {
+                card.addEventListener('click', function(event) {
+                    // Verificamos si el clic provino de un botón de acción dentro de la tarjeta
+                    if (event.target.closest('.action-buttons-card')) {
+                        return; // Si sí, no hacemos nada y dejamos que el botón maneje su propio evento
+                    }
+
+                    // Si no fue en los botones, navegamos a la URL de la carpeta
+                    const url = this.dataset.href;
+                    if (url) {
+                        window.location.href = url;
+                    }
+                });
+            });
+
+
+        });
+
+
+
+
+    </script>
+
 @endsection

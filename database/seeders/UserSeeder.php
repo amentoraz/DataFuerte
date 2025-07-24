@@ -15,7 +15,9 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        // Delete all users
+        DB::table('users')->delete();
+        // Insert user
         DB::table('users')->updateOrInsert(
             ['email' => env('SEED_USER_EMAIL')],
             [

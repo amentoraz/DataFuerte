@@ -8,11 +8,11 @@ Please note this won't work without HTTPS, since it uses WebCrypto.
 ⚠️ **Basic functionality still on development** ⚠️
 ---
 
+
 ⚙️ TODO before this system can be used
 
 Basically data organization should be stable so that nothing is lost with updates
 
-* Folders to organize data (passwords, texts and files).
 * Extend the logic from passwords (where the main development is now taking place) to texts and files. Otherwise unify everything into one screen, filesystem-like, with filters.
 * Basic configuration screen with parameters. Probably the user should be forced to go here after installation if settings such as iterations are configurable. Some of these may become constants after instalation unless a hard reset is done.
 * Final security assessment before the database and algorithms are set in stone.

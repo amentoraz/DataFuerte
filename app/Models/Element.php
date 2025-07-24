@@ -6,9 +6,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User; // Imports the User model
 
-class Password extends Model
+class Element extends Model
 {
     use HasFactory;
+
+    protected $table = 'elements'; 
+    protected $keyType = 'string'; 
+    protected $primaryKey = 'uuid'; 
+    public $incrementing = false;
+
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +27,7 @@ class Password extends Model
         'content',
         'iv',
         'salt',
+        'hmac',
     ];
 
     /**

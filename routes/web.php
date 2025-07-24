@@ -26,10 +26,18 @@ Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/', [LoginController::class, 'login']);
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/myaccount/passwords', [AccountController::class, 'passwords'])->name('account.passwords');
-    Route::post('/myaccount/passwords/store', [AccountController::class, 'storePassword'])->name('passwords.store');
-    Route::delete('/myaccount/passwords/{id}', [AccountController::class, 'deletePassword'])->name('passwords.delete');
-    Route::get('/myaccount/passwords/{id}', [AccountController::class, 'getPasswordData'])->name('passwords.get');
+    
+
+// For https://datafuerte.local/myaccount/elements/ (shows parent = 0)
+//Route::get('/myaccount/elements', [AccountController::class, 'elements'])->name('account.elements');
+
+// For https://datafuerte.local/myaccount/elements/{uuid} (shows elements with specific parent)
+Route::get('/myaccount/elements/{uuid?}', [AccountController::class, 'elements'])->name('account.elements');
+
+
+    Route::post('/myaccount/elements/store', [AccountController::class, 'storeElement'])->name('elements.store');
+    Route::delete('/myaccount/elements/{id}', [AccountController::class, 'deleteElement'])->name('elements.delete');
+    Route::get('/myaccount/elements/get/{uuid}', [AccountController::class, 'getElementData'])->name('elements.get');
 
     Route::get('/myaccount/texts', [AccountController::class, 'texts'])->name('account.texts');
     Route::post('/myaccount/texts/store', [AccountController::class, 'storeText'])->name('texts.store');

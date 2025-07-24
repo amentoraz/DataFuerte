@@ -1,6 +1,6 @@
                          
     
-    <!-- Pestañas de productos -->
+    <!-- Tabs -->
     <div class="px-6">
         <h3 class="text-md font-medium text-gray-900 mb-4 py-1"></h3>
     <!-- Navigation tabs -->
@@ -10,29 +10,16 @@
                     class="tab-button whitespace-nowrap py-2 px-1 border-b-2 
                     font-medium text-sm focus:outline-none transition-colors 
                     duration-200 
-                    @if ($activeTab === 'passwords')
+                    @if ($activeTab === 'elements')
                     border-blue-500 text-blue-600
                     @else
                     border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
                     @endif">
-                    <a href="{{ route('account.passwords') }}" class="w-full block">
-                        Passwords
+                    <a href="{{ route('account.elements') }}" class="w-full block">
+                        Elements
                     </a>
                 </button>
 
-                <button type="button" 
-                    class="tab-button whitespace-nowrap py-2 px-1 border-b-2 
-                    font-medium text-sm focus:outline-none transition-colors 
-                    duration-200 
-                    @if ($activeTab === 'texts')
-                    border-blue-500 text-blue-600
-                    @else
-                    border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
-                    @endif">
-                    <a href="{{ route('account.texts') }}" class="w-full block">
-                        Texts
-                    </a>
-                </button>
 
 
 
