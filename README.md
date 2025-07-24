@@ -2,24 +2,29 @@
 
 A secure system for managing personal keys via a web server.
 
-Please note this won't work without HTTPS, since it uses WebCrypto.
+Under AGPL-3.0 license. Read LICENSE for more details.
+
+
+Please note this software won't work without HTTPS, since it uses WebCrypto.
 
 ---
 ⚠️ **Basic functionality still on development** ⚠️
 ---
 
-
 ⚙️ TODO before this system can be used
 
-Basically data organization should be stable so that nothing is lost with updates
+Data organization should be stable so that nothing is lost with updates.
 
-* Extend the logic from passwords (where the main development is now taking place) to texts and files. Otherwise unify everything into one screen, filesystem-like, with filters.
-* Basic configuration screen with parameters. Probably the user should be forced to go here after installation if settings such as iterations are configurable. Some of these may become constants after instalation unless a hard reset is done.
+* Add ConfigurationController to the tabs and/or allow it to be accessed after initial configuration
+* Let the iterations field actually work: encryption/decryption iterations used must be this value.
+* "Iterations" configuration can't be modified as long as there's any encrypted file, not to render them useless.
+* Add texts to the types of encrypted elements, dynamically creating a textarea for them.
 * Final security assessment before the database and algorithms are set in stone.
 
 ⚙️ TODO further
 
 * Automatic installation script.
+* Add files to the types of encrypted elements.
 * Recommendations on Master Key creation (length, etc). Since it MUST be written everytime content is decrypted, now by design you can use different Master Keys. Probably this is a good idea.
 * If several algorithms are considered, they might be chosen in the general configuration and/or for each content.
 * File tags for the three kinds of content, to allow further organization.

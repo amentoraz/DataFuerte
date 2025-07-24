@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Element;
 use Illuminate\Support\Str;
 
-class AccountController extends Controller
+class ElementController extends Controller
 {
 
     // *******************************************
@@ -14,9 +14,9 @@ class AccountController extends Controller
     // *******************************************
 
 
-    public function elements(Request $request, $uuid = 0)
+    public function index(Request $request, $uuid = 0)
     {        
-
+        
         // Retrieve all elements related with current user
         $elements = Element::where('user_id', $request->user()->id)
             ->where('parent', $uuid)
@@ -46,7 +46,7 @@ class AccountController extends Controller
     }
 
 
-    public function storeElement(Request $request)
+    public function store(Request $request)
     {
         try {
             switch($request->element_type_id) {
@@ -57,7 +57,6 @@ class AccountController extends Controller
                         'iv' => 'required|string',
                         'salt' => 'required|string',
                         'hmac' => 'required|string',
-                        'parent' => 'required|uuid',
                     ]);
                     break;
                 case 4:
@@ -106,14 +105,14 @@ class AccountController extends Controller
     }
 
 
-    public function deleteElement(Request $request, $uuid)
+    public function delete(Request $request, $uuid)
     {
         $element = Element::find($uuid);
         $element->delete();
         return redirect()->route('account.elements')->with('success', 'Element removed.');;
     }
 
-    public function getElementData(Request $request, $uuid) 
+    public function get(Request $request, $uuid) 
     {
         // We get password data from database (only if it belongs to current user)
         $element = Element::find($uuid);

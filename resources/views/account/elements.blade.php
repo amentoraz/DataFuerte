@@ -4,11 +4,19 @@
 
 @section('content') 
 
-    @include('partials.header')
+<div class="container mx-auto px-6">
 
+    
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6"> 
+        @include('partials.header')
+    </div>
+
+    <!-- Tabs -->
+    
     @include('partials.pestanyas')
-        
-    <div class="container mx-auto">
+    
+
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6"> 
         
         <h1 class="text-3xl font-bold mb-6 text-gray-800 pt-6">List of Elements</h1>
     
@@ -30,7 +38,7 @@
                 <strong class="font-bold">Error!</strong>
                 <span class="block sm:inline">{{ session('error') }}</span>
                 <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
-                    <svg class="fill-current h-6 w-6 text-green-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="this.parentElement.parentElement.style.display='none';">
+                    <svg class="fill-current h-6 w-6 **text-red-500**" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" onclick="this.parentElement.parentElement.style.display='none';">
                         <title>Cerrar</title>
                         <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 2.65a1.2 1.2 0 1 1-1.697-1.697L8.303 10l-2.651-2.651a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-2.651a1.2 1.2 0 1 1 1.697 1.697L11.697 10l2.651 2.651a1.2 1.2 0 0 1 0 1.698z"/>
                     </svg>

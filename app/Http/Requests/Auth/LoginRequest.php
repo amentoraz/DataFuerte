@@ -50,6 +50,11 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        // Avoid session fixation
+        session()->regenerate();
+
+        $this->redirector->intended(route('account.elements'));
     }
 
     /**

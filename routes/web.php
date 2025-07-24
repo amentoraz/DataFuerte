@@ -2,8 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;  
-use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ElementController;
+use App\Http\Controllers\ConfigurationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,32 +17,23 @@ use App\Http\Controllers\Auth\LoginController;
 |
 */
 
-/*
-Route::get('/', function () {
-    return ['Laravel' => app()->version()];
-});
-*/
+
 
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/', [LoginController::class, 'login']);
 
 Route::middleware(['auth'])->group(function () {
+
+    Route::get('/configuration', [ConfigurationController::class, 'index'])->name('configuration.index');
+    Route::post('/configuration', [ConfigurationController::class, 'store'])->name('configuration.store');
     
 
-// For https://datafuerte.local/myaccount/elements/ (shows parent = 0)
-//Route::get('/myaccount/elements', [AccountController::class, 'elements'])->name('account.elements');
-
-// For https://datafuerte.local/myaccount/elements/{uuid} (shows elements with specific parent)
-Route::get('/myaccount/elements/{uuid?}', [AccountController::class, 'elements'])->name('account.elements');
-
-
-    Route::post('/myaccount/elements/store', [AccountController::class, 'storeElement'])->name('elements.store');
-    Route::delete('/myaccount/elements/{id}', [AccountController::class, 'deleteElement'])->name('elements.delete');
-    Route::get('/myaccount/elements/get/{uuid}', [AccountController::class, 'getElementData'])->name('elements.get');
-
-    Route::get('/myaccount/texts', [AccountController::class, 'texts'])->name('account.texts');
-    Route::post('/myaccount/texts/store', [AccountController::class, 'storeText'])->name('texts.store');
-    Route::delete('/myaccount/texts/{id}', [AccountController::class, 'deleteText'])->name('texts.delete');
+    Route::middleware(['installation'])->group(function () {
+        Route::get('/myaccount/elements/{uuid?}', [ElementController::class, 'index'])->name('account.elements');
+        Route::post('/myaccount/elements/store', [ElementController::class, 'store'])->name('elements.store');
+        Route::delete('/myaccount/elements/{id}', [ElementController::class, 'delete'])->name('elements.delete');
+        Route::get('/myaccount/elements/get/{uuid}', [ElementController::class, 'get'])->name('elements.get');
+    });
 });
 
 
