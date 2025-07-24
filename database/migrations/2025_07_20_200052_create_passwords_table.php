@@ -11,29 +11,55 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Las claves son más cortas
-        Schema::create('passwords', function (Blueprint $table) {
-            $table->id(); // Columna para el ID autoincremental
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Clave foránea a la tabla users
-            $table->string('key'); // Columna para el string "key"
-            $table->binary('content'); // Columna para el BLOB "content"
-            $table->binary('iv'); // Columna para el BLOB "iv"
-            $table->binary('salt'); // Columna para el BLOB "salt"
-            $table->string('hmac'); // Columna para el string "hmac"
-            $table->timestamps(); // Columnas created_at y updated_at
+
+        // FOlders
+        Schema::create('folders', function (Blueprint $table) {
+            $table->id(); // Autoincremental ID
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Foreign key to users table
+            $table->foreignId('parent_id')->nullable()->constrained('folders')->onDelete('cascade'); // Foreign key to folders table
+            $table->string('name'); // String "name"
+            $table->timestamps(); // created_at and updated_at columns
         });
 
-        // Los textos son más largos
-        Schema::create('texts', function (Blueprint $table) {
-            $table->id(); // Columna para el ID autoincremental
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Clave foránea a la tabla users
-            $table->string('key'); // Columna para el string "key"
-            $table->binary('content'); // Columna para el BLOB "content"
-            $table->binary('iv'); // Columna para el BLOB "iv"
-            $table->binary('salt'); // Columna para el BLOB "salt"
-            $table->string('hmac'); // Columna para el string "hmac"            
-            $table->timestamps(); // Columnas created_at y updated_at
+        // Keys are shorter
+        Schema::create('passwords', function (Blueprint $table) {
+            $table->id(); // Autoincremental ID
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Foreign key to users table
+            $table->foreignId('folder_id')->constrained()->onDelete('cascade'); // Foreign key to folders table
+            $table->string('key'); // String "key"
+            $table->binary('content'); // BLOB "content"
+            $table->binary('iv'); // BLOB "iv"
+            $table->binary('salt'); // BLOB "salt"
+            $table->string('hmac'); // String "hmac"
+            $table->timestamps(); // created_at and updated_at columns
         });
+
+        // Texts are longer
+        Schema::create('texts', function (Blueprint $table) {
+            $table->id(); // Autoincremental ID
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Foreign key to users table
+            $table->foreignId('folder_id')->constrained()->onDelete('cascade'); // Foreign key to folders table
+            $table->string('key'); // String "key"
+            $table->binary('content'); // BLOB "content"
+            $table->binary('iv'); // BLOB "iv"
+            $table->binary('salt'); // BLOB "salt"
+            $table->string('hmac'); // String "hmac"            
+            $table->timestamps(); // created_at and updated_at columns
+        });
+
+        // Files 
+        Schema::create('files', function (Blueprint $table) {
+            $table->id(); // Autoincremental ID
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Foreign key to users table
+            $table->foreignId('folder_id')->constrained()->onDelete('cascade'); // Foreign key to folders table
+            $table->string('key'); // String "key"
+            $table->binary('content'); // BLOB "content"
+            $table->binary('iv'); // BLOB "iv"
+            $table->binary('salt'); // BLOB "salt"
+            $table->string('hmac'); // String "hmac"            
+            $table->timestamps(); // created_at and updated_at columns
+        });
+
 
     }
 
