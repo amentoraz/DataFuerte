@@ -10,11 +10,6 @@
         
     <div class="container mx-auto">
         
-
-    <button id="test-encryption" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-        Test Encryption
-    </button>
-
         <h1 class="text-3xl font-bold mb-6 text-gray-800 pt-6">List of Passwords</h1>
     
         @if (session('success'))
@@ -48,16 +43,11 @@
         @if ($passwords->isEmpty())
             <p class="text-red-600 pb-4">There are no passwords registered yet.</p>
         @else
-            <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+            {{-- Big screens (hidden in small ones) --}}
+            <div class="hidden sm:block overflow-x-auto bg-white shadow-md rounded-lg">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                ID
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                User
-                            </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Key
                             </th>
@@ -65,23 +55,16 @@
                                 Created
                             </th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Updated
+                                Last Updated
                             </th>
-                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"> {{-- Added for actions --}}
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
-                            </th>                            
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach ($passwords as $password)
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {{ $password->id }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $password->user->name ?? 'N/A' }} 
-                                    {{-- Muestra el nombre del usuario, o 'N/A' si no se encuentra --}}
-                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {{ $password->key }}
                                 </td>
@@ -97,7 +80,6 @@
                                             class="text-blue-600 hover:text-blue-900 view-button p-2 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-eye"></i>
                                     </button>
-
                                     <button type="button"
                                             data-id="{{ $password->id }}"
                                             class="text-red-600 hover:text-red-900 delete-button p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
@@ -110,11 +92,46 @@
                 </table>
             </div>
 
+            {{-- Small screens (hidden in big ones) --}}
+            <div class="sm:hidden grid grid-cols-1 gap-4">
+                @foreach ($passwords as $password)
+                    <div class="bg-white shadow-md rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-gray-800">Key:</span>
+                            <span class="text-gray-600">{{ $password->key }}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-gray-800">Created:</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">                            
+                            <span class="text-gray-600">{{ $password->created_at->format('d/m/Y H:i') }}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-gray-800">Last Updated:</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">                                
+                            <span class="text-gray-600">{{ $password->updated_at->format('d/m/Y H:i') }}</span>
+                        </div>
+                        <div class="flex justify-end space-x-2">
+                            <button type="button"
+                                    data-id="{{ $password->id }}"
+                                    class="text-blue-600 hover:text-blue-900 view-button p-2 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button type="button"
+                                    data-id="{{ $password->id }}"
+                                    class="text-red-600 hover:text-red-900 delete-button p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
             <div class="mt-6 pb-6">
                 {{ $passwords->links() }} {{-- Show pagination links --}}
             </div>
         @endif
-
 
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">
             <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Password</h2>

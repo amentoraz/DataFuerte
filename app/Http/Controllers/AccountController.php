@@ -16,8 +16,8 @@ class AccountController extends Controller
 
     public function passwords(Request $request)
     {
-        
-        $passwords = Password::with('user')->paginate(10);       
+        // Retrieve only passwords related with current user
+        $passwords = Password::where('user_id', $request->user()->id)->paginate(10);       
 
         $user = $request->user();
         $activeTab = 'passwords';
@@ -60,9 +60,13 @@ class AccountController extends Controller
         return redirect()->route('account.passwords')->with('success', 'Password removed.');;
     }
 
-    public function getPasswordData($id) 
+    public function getPasswordData(Request $request, $id) 
     {
+        // We get password data from database (only if it belongs to current user)
         $password = Password::find($id);
+        if ($password->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
         // We print it in JSON
         return response()->json($password);
     }
@@ -75,7 +79,7 @@ class AccountController extends Controller
 
     public function texts(Request $request)
     {
-        $texts = Text::with('user')->paginate(10); 
+        $texts = Text::where('user_id', $request->user()->id)->paginate(10); 
 
         $user = $request->user();
         $activeTab = 'texts';
@@ -91,7 +95,10 @@ class AccountController extends Controller
 
         $text = new Text();
         $text->key = $request->key;
-        $text->content = "";
+        $text->content = $request->textEncrypted;
+        $text->iv = $request->iv;
+        $text->salt = $request->salt;
+        $text->hmac = $request->hmac;
         $text->user_id = $request->user()->id;
         $text->save();
 
@@ -103,5 +110,15 @@ class AccountController extends Controller
         $text = Text::find($id);
         $text->delete();
         return redirect()->route('account.texts')->with('success', 'Text removed.');;
+    }
+
+    public function getTextData($id) 
+    {
+        $text = Text::find($id);
+        if ($text->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        // We print it in JSON
+        return response()->json($text);
     }
 }
