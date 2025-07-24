@@ -18,7 +18,7 @@
 
     <div class="bg-white shadow-md rounded-lg p-6 mb-6"> 
         
-        <h1 class="text-3xl font-bold mb-6 text-gray-800 pt-6">List of Elements</h1>
+        <h1 class="text-3xl font-bold mb-6 text-gray-800">List of Elements</h1>
     
         @if (session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
@@ -202,9 +202,9 @@
 
 
 
-
+    </div>
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-            <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Element</h2>
+            <h1 class="text-3xl font-bold mb-4 text-gray-800">Add New Element</h1>
             <form id="elementForm" action="{{ route('elements.store') }}" method="POST">
                 @csrf
                 <div class="mb-4">
@@ -317,8 +317,6 @@
             </div>
         </div>
 
-
-    </div>
 
 
 @endsection
