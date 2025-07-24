@@ -8,6 +8,27 @@ Please note this won't work without HTTPS, since it uses WebCrypto.
 ⚠️ **Basic functionality still on development** ⚠️
 ---
 
+⚙️ TODO before this system can be used
+
+Basically data organization should be stable so that nothing is lost with updates
+
+* Folders to organize data (passwords, texts and files).
+* Extend the logic from passwords (where the main development is now taking place) to texts and files. Otherwise unify everything into one screen, filesystem-like, with filters.
+* Basic configuration screen with parameters. Probably the user should be forced to go here after installation if settings such as iterations are configurable. Some of these may become constants after instalation unless a hard reset is done.
+* Final security assessment before the database and algorithms are set in stone.
+
+⚙️ TODO further
+
+* Automatic installation script.
+* Recommendations on Master Key creation (length, etc). Since it MUST be written everytime content is decrypted, now by design you can use different Master Keys. Probably this is a good idea.
+* If several algorithms are considered, they might be chosen in the general configuration and/or for each content.
+* File tags for the three kinds of content, to allow further organization.
+* Hard reset mechanism.
+* Search filters for passwords/texts/files.
+* CSP headers and other security mechanisms.
+* Unify all the screens into one and turn it into a virtual "filesystem". This may happen in the previous development phase.
+* Fully APIfy the system to allow external clients for those who don't want to use the current frontend (?)
+
 
 
 ## 🛠 How to install
