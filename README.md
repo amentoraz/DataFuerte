@@ -11,19 +11,10 @@ Please note this software won't work without HTTPS, since it uses WebCrypto.
 ⚠️ **Basic functionality still on development** ⚠️
 ---
 
-NEXT COMMIT
-- Iterations field added to the elements table.
-- PBKDF2 Iterations field actually works: the system iterates the amount in the configuration file and the amount of iterations is stored in the database for each element, so it can be dynamically changed. When decrypting, it will read the amount from the database and act accordingly.
-
-
 ⚙️ TODO before this system can be used
 
 Data organization should be stable so that nothing is lost with updates.
-
-
-* "Iterations" configuration can be changed, and it will affect iterations from then on.
 * Maybe include some visible iteration information on files.
-* Add ConfigurationController to the tabs and/or allow it to be accessed after initial configuration
 * Add texts to the types of encrypted elements, dynamically creating a textarea for them instead of a small text field.
 * Final security assessment before the database and algorithms are set in stone.
 

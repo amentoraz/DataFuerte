@@ -13,7 +13,16 @@ class ConfigurationController extends Controller
     {
         $configuration = Configuration::where('user_id', $request->user()->id)->get();
         $user = $request->user();
-        return view('configuration.index', compact('configuration', 'user'));
+        $activeTab = 'configuration';
+
+        // Check if installed already
+        $installed = Configuration::where('user_id', $request->user()->id)->where('parameter', 'installed')->first();
+
+        // Number of iterations
+        $iterations = Configuration::where('user_id', $request->user()->id)->where('parameter', 'iterations')->first();
+
+
+        return view('configuration.index', compact('configuration', 'user', 'activeTab', 'installed', 'iterations'));
     }
 
     public function store(Request $request)
@@ -51,7 +60,11 @@ class ConfigurationController extends Controller
                 $existingInstalled->save();
             }
 
-            return redirect()->route('account.elements')->with('success', 'Configuration saved successfully');
+            if (!$existingInstalled) {
+                return redirect()->route('account.elements')->with('success', 'Configuration saved successfully. You may now begin to use the platform.');
+            } else {
+                return redirect()->route('configuration.index')->with('success', 'Configuration saved successfully.');
+            }
         } catch (\Exception $e) {
             return redirect()->route('configuration.index')->with('error', 'Error saving configuration: ' . $e->getMessage());
         }

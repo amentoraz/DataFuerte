@@ -17,22 +17,20 @@
                 </a>
             </button>
 
-            {{-- Repeat for other tabs --}}
-            {{--
             <button type="button"
                 class="tab-button whitespace-nowrap py-2
                 font-medium text-sm focus:outline-none transition-colors
                 duration-200
-                @if ($activeTab === 'other_tab')
+                @if ($activeTab === 'configuration')
                     text-blue-600 bg-white rounded-t-lg border-b-2 border-blue-500
                 @else
                     text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent
                 @endif">
-                <a href="#" class="w-full block px-4">
-                    Other Tab
+                <a href="{{ route('configuration.index') }}" class="w-full block px-4">
+                    Configuration
                 </a>
             </button>
-            --}}
+
 
         </nav>
         <div class="absolute inset-y-0 left-0 w-8 pointer-events-none tab-scroll-indicator-left"></div>
