@@ -45,6 +45,7 @@ class AccountController extends Controller
         $password->content = $request->passwordEncrypted;
         $password->iv = $request->iv;
         $password->salt = $request->salt;
+        $password->hmac = $request->hmac;
         $password->user_id = $request->user()->id;
         $password->save();
 

@@ -132,6 +132,7 @@
                 <input type="hidden" name="passwordEncrypted" id="passwordEncrypted">
                 <input type="hidden" name="iv">
                 <input type="hidden" name="salt">
+                <input type="hidden" name="hmac">
 
                 <div class="flex items-center justify-between">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
@@ -175,7 +176,7 @@
 
 
         <div id="modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-[50rem]">
                 <h3 class="text-lg font-semibold mb-4 text-gray-900">Enter Master Key</h3>
                 <input type="password" id="masterKey" class="w-full border rounded p-2 mb-4" 
                     autocomplete="new-password" aria-autocomplete="none" value="">
@@ -187,7 +188,7 @@
         </div>
 
         <div id="viewModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden z-50">
-            <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-[50rem]">
                 <h3 class="text-lg font-bold mb-4">View password</h3>
                 <label class="block mb-2 text-sm text-gray-600">Enter master key:</label>
                 <input id="viewMasterKeyInput" type="password" class="w-full p-2 border rounded mb-4" placeholder="Master key"
@@ -284,11 +285,12 @@
             }
 
             try {
-                const { encryptedData, iv, salt } = await encryptData(plaintext, passphrase);
+                const { encryptedData, iv, salt, hmac } = await encryptData(plaintext, passphrase);
 
                 document.getElementById("passwordEncrypted").value = encryptedData;
                 document.querySelector("input[name='iv']").value = iv;
                 document.querySelector("input[name='salt']").value = salt;
+                document.querySelector("input[name='hmac']").value = hmac;
 
                 // Clean plaintext input and master key
                 document.getElementById("passwordPlain").value = '';
@@ -351,7 +353,8 @@
                     currentPasswordData = {
                         content: data.content,
                         iv: data.iv,
-                        salt: data.salt
+                        salt: data.salt,
+                        hmac: data.hmac
                     };
 
                     if (!validateBase64(currentPasswordData.content) || !validateBase64(currentPasswordData.iv) || !validateBase64(currentPasswordData.salt)) {
@@ -373,15 +376,15 @@
                 return;
             }
 
-            const { content, iv, salt } = currentPasswordData;
+            const { content, iv, salt, hmac } = currentPasswordData;
 
-            if (!content || !iv || !salt) {
+            if (!content || !iv || !salt || !hmac) {
                 decryptedPasswordInput.value = "❌ Password data not available. Try again.";
                 return;
             }
 
             try {
-                const decrypted = await decryptData(content, masterKey, iv, salt);
+                const decrypted = await decryptData(content, masterKey, iv, salt, hmac);
                 decryptedPasswordInput.value = decrypted;
                 viewMasterKeyInput.value = ''; // Clear master key input
                 if (window.gc) window.gc(); // Force garbage collection if available
@@ -400,7 +403,7 @@
                 }, 1000);
             } catch (e) {
                 console.error("Error during decryption:", e);
-                decryptedPasswordInput.value = "❌ Incorrect master key or corrupted data.";
+                decryptedPasswordInput.value = "❌ Decryption failed: " + e.message;
                 clearInterval(countdownTimer); 
                 countdownDisplay.textContent = '';
             }

@@ -37,6 +37,21 @@ export async function encryptData(plaintext, passphrase) {
         ["encrypt"]
     );
 
+    // Derivate the HMAC key
+    const hmacKey = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+    );
+
+    // Encrypt the plaintext
     const encrypted = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv: iv },
         key,
@@ -46,10 +61,15 @@ export async function encryptData(plaintext, passphrase) {
     // Encode to base64
     const toBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
 
+    // Generate HMAC from encrypted data, IV and salt
+    const dataToSign = new Uint8Array([...new Uint8Array(encrypted), ...iv, ...salt]);
+    const hmacSignature = await crypto.subtle.sign("HMAC", hmacKey, dataToSign);
+
     return {
         encryptedData: toBase64(encrypted),
         iv: toBase64(iv),
-        salt: toBase64(salt)
+        salt: toBase64(salt),
+        hmac: toBase64(hmacSignature)
     };
 }
 
@@ -63,8 +83,8 @@ export async function encryptData(plaintext, passphrase) {
  * @returns {Promise<string>} The decrypted plaintext.
  * @throws {Error} If decryption fails (e.g., incorrect key, corrupted data).
  */
-export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64) {
-    if (!ciphertextB64 || !masterKey || !ivB64 || !saltB64) {
+export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmacB64) {
+    if (!ciphertextB64 || !masterKey || !ivB64 || !saltB64 || !hmacB64) {
         throw new Error("All decryption parameters are required.");
     }
 
@@ -73,6 +93,10 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64) {
     const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
     const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
 
+    // hmac received
+    const hmacReceived = Uint8Array.from(atob(hmacB64), c => c.charCodeAt(0));
+
+
     const keyMaterial = await crypto.subtle.importKey(
         "raw",
         encoder.encode(masterKey),
@@ -80,6 +104,8 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64) {
         false,
         ["deriveKey"]
     );
+
+    // Derivate the AES key
     const key = await crypto.subtle.deriveKey(
         {
             name: "PBKDF2",
@@ -92,6 +118,30 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64) {
         false,
         ["decrypt"]
     );
+
+    // Derivate the HMAC key
+    const hmacKey = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["verify"]
+    );
+
+    // Verify HMAC before decrypting
+    const dataToVerify = new Uint8Array([...ciphertext, ...iv, ...salt]);
+    const isValid = await crypto.subtle.verify("HMAC", hmacKey, hmacReceived, dataToVerify);
+
+    if (!isValid) {
+        throw new Error("HMAC verification failed - data may have been tampered with");
+    }
+
+
     const decrypted = await crypto.subtle.decrypt(
         { name: "AES-GCM", iv: iv },
         key,
