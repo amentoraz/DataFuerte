@@ -228,6 +228,7 @@
                 <input type="hidden" name="iv">
                 <input type="hidden" name="salt">
                 <input type="hidden" name="hmac">
+                <input type="hidden" name="iterations">
                 <input type="hidden" name="parent" value="{{ $uuid }}">
 
                 <div class="flex items-center justify-between">
@@ -388,12 +389,13 @@
             }
 
             try {
-                const { encryptedData, iv, salt, hmac } = await encryptData(plaintext, passphrase);
+                const { encryptedData, iv, salt, hmac } = await encryptData(plaintext, passphrase, {{ $iterations }});
 
                 document.getElementById("passwordEncrypted").value = encryptedData;
                 document.querySelector("input[name='iv']").value = iv;
                 document.querySelector("input[name='salt']").value = salt;
                 document.querySelector("input[name='hmac']").value = hmac;
+                document.querySelector("input[name='iterations']").value = {{ $iterations }};
 
                 // Clean plaintext input and master key
                 document.getElementById("passwordPlain").value = '';
@@ -457,7 +459,8 @@
                         content: data.content,
                         iv: data.iv,
                         salt: data.salt,
-                        hmac: data.hmac
+                        hmac: data.hmac,
+                        iterations: data.iterations
                     };
 
                     if (!validateBase64(currentPasswordData.content) || !validateBase64(currentPasswordData.iv) || !validateBase64(currentPasswordData.salt)) {
@@ -479,7 +482,7 @@
                 return;
             }
 
-            const { content, iv, salt, hmac } = currentPasswordData;
+            const { content, iv, salt, hmac, iterations } = currentPasswordData;
 
             if (!content || !iv || !salt || !hmac) {
                 decryptedPasswordInput.value = "❌ Password data not available. Try again.";
@@ -487,7 +490,7 @@
             }
 
             try {
-                const decrypted = await decryptData(content, masterKey, iv, salt, hmac);
+                const decrypted = await decryptData(content, masterKey, iv, salt, hmac, iterations);
                 decryptedPasswordInput.value = decrypted;
                 viewMasterKeyInput.value = ''; // Clear master key input
                 if (window.gc) window.gc(); // Force garbage collection if available

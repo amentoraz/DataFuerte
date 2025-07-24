@@ -8,7 +8,7 @@
  * @returns {Promise<{encryptedData: string, iv: string, salt: string}>} An object containing the base64 encoded encrypted data, IV, and salt.
  * @throws {Error} If encryption fails.
  */
-export async function encryptData(plaintext, passphrase) {
+export async function encryptData(plaintext, passphrase, iterationAmount) {
     if (!passphrase || !plaintext) {
         throw new Error("Plaintext and passphrase are required for encryption.");
     }
@@ -28,7 +28,7 @@ export async function encryptData(plaintext, passphrase) {
         {
             name: "PBKDF2",
             salt: salt,
-            iterations: 100000,
+            iterations: iterationAmount,
             hash: "SHA-256"
         },
         keyMaterial,
@@ -42,7 +42,7 @@ export async function encryptData(plaintext, passphrase) {
         {
             name: "PBKDF2",
             salt: salt,
-            iterations: 100000,
+            iterations: iterationAmount,
             hash: "SHA-256"
         },
         keyMaterial,
@@ -83,7 +83,7 @@ export async function encryptData(plaintext, passphrase) {
  * @returns {Promise<string>} The decrypted plaintext.
  * @throws {Error} If decryption fails (e.g., incorrect key, corrupted data).
  */
-export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmacB64) {
+export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmacB64, iterationAmount) {
     if (!ciphertextB64 || !masterKey || !ivB64 || !saltB64 || !hmacB64) {
         throw new Error("All decryption parameters are required.");
     }
@@ -110,7 +110,7 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmac
         {
             name: "PBKDF2",
             salt: salt,
-            iterations: 100000,
+            iterations: iterationAmount,
             hash: "SHA-256"
         },
         keyMaterial,
@@ -124,7 +124,7 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmac
         {
             name: "PBKDF2",
             salt: salt,
-            iterations: 100000,
+            iterations: iterationAmount,
             hash: "SHA-256"
         },
         keyMaterial,

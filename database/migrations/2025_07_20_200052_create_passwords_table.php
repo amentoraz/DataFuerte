@@ -31,6 +31,7 @@ return new class extends Migration
             $table->binary('iv'); // BLOB "iv"
             $table->binary('salt'); // BLOB "salt"
             $table->string('hmac'); // String "hmac"
+            $table->integer('iterations'); // Integer "iterations"
             $table->timestamps(); // created_at and updated_at columns
         });
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Element;
+use App\Models\Configuration;
 use Illuminate\Support\Str;
 
 class ElementController extends Controller
@@ -38,10 +39,16 @@ class ElementController extends Controller
             }
         }
 
+        // Get iterations from configuration
+        $iterations = Configuration::where('user_id', $request->user()->id)->where('parameter', 'iterations')->first()->value;
+
+        // Get user data
         $user = $request->user();
+
+        // Get active tab
         $activeTab = 'elements';
 
-        return view('account.elements', compact('elements', 'user', 'uuid', 'activeTab'));
+        return view('account.elements', compact('elements', 'user', 'uuid', 'activeTab', 'iterations'));
 
     }
 
@@ -57,6 +64,7 @@ class ElementController extends Controller
                         'iv' => 'required|string',
                         'salt' => 'required|string',
                         'hmac' => 'required|string',
+                        'iterations' => 'required|integer',
                     ]);
                     break;
                 case 4:
@@ -84,6 +92,7 @@ class ElementController extends Controller
                 $element->user_id = $request->user()->id;
                 $element->element_type_id = 1;
                 $element->parent = $request->parent;
+                $element->iterations = $request->iterations;
                 $element->save();
                 break;
             case 4: 
@@ -97,6 +106,7 @@ class ElementController extends Controller
                 $element->user_id = $request->user()->id;
                 $element->element_type_id = 4;
                 $element->parent = $request->parent;
+                $element->iterations = 0;
                 $element->save();
                 break;
         }
