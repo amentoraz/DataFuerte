@@ -4,7 +4,7 @@
 
 @section('content') 
 
-<div class="container mx-auto px-6">
+<div class="container mx-auto md:px-6">
 
     
     <div class="bg-white shadow-md rounded-lg p-6 mb-6"> 
@@ -16,10 +16,8 @@
     @include('partials.pestanyas')
     
 
-    <div class="bg-white shadow-md rounded-lg p-6 mb-6"> 
-        
-        <h1 class="text-3xl font-bold mb-6 text-gray-800">List of Elements</h1>
-    
+    <div class="bg-white shadow-md rounded-lg p-4 pb-0 mb-6">
+
         @if (session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
                 <strong class="font-bold">Success!</strong>
@@ -61,6 +59,9 @@
                             </th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Type
+                            </th>
+                            <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                PBKDF2 Iterations
                             </th>
                             <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Last Modified
@@ -108,6 +109,11 @@
                                     @endswitch
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                                    @if ($element->element_type_id !== 4)
+                                        {{ $element->iterations }}
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
                                     {{ $element->updated_at->format('d/m/Y H:i') }}
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap text-right text-sm font-medium action-buttons-cell">                           
@@ -133,6 +139,7 @@
 
 
             {{-- Small screens (hidden in big ones) --}}
+
                 <div class="sm:hidden grid grid-cols-1 gap-3">
                     @foreach ($elements as $element)
                         {{-- Usamos un div principal para la tarjeta que actuará como el elemento clicable para carpetas --}}
@@ -179,6 +186,11 @@
                                         @break
                                 @endswitch
                             </div>
+                            <div class="text-sm text-gray-600 mb-2">
+                                @if ($element->element_type_id !== 4)
+                                    <span class="font-semibold">PBKDF2 Iterations:</span> {{ $element->iterations }}
+                                @endif
+                            </div>                              
                             <div class="text-sm text-gray-600 mb-3">
                                 <span class="font-semibold">Last Modified:</span> {{ $element->updated_at->format('d/m/Y H:i') }}
                             </div>
@@ -203,7 +215,7 @@
                     @endforeach
                 </div>
 
-            <div class="mt-6 pb-6">
+            <div class="mt-6 {{ $elements->lastPage() > 1 ? 'pb-6' : 'pb-1' }}">
                 {{ $elements->links() }} {{-- Show pagination links --}}
             </div>            
         @endif

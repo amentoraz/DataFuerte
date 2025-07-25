@@ -13,8 +13,6 @@ Please note this software won't work without HTTPS, since it uses WebCrypto.
 
 ⚙️ TODO before this system can be used
 
-Data organization should be stable so that nothing is lost with updates.
-* Maybe include some visible iteration information on files.
 * Final security assessment before the database and algorithms are set in stone.
 
 ⚙️ TODO further
