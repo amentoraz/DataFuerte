@@ -82,6 +82,9 @@
                                         @case(1)
                                             <i class="fas fa-key text-yellow-500 mr-2"></i>
                                             @break
+                                        @case(2)
+                                            <i class="fas fa-file-alt text-gray-500 mr-2"></i>
+                                            @break
                                         @case(4)
                                             <i class="fas fa-folder text-blue-500 mr-2"></i>
                                             @break
@@ -111,6 +114,7 @@
                                     @if ($element->element_type_id !== 4)
                                     <button type="button"
                                             data-id="{{ $element->uuid }}"
+                                            data-type="{{ $element->element_type_id }}"
                                             class="text-blue-600 hover:text-blue-900 view-button p-1 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -141,6 +145,9 @@
                                 @switch($element->element_type_id)
                                     @case(1)
                                         <i class="fas fa-key text-yellow-500 mr-2 text-lg"></i>
+                                        @break
+                                    @case(2)
+                                        <i class="fas fa-file-alt text-gray-500 mr-2 text-lg"></i>
                                         @break
                                     @case(4)
                                         <i class="fas fa-folder text-blue-500 mr-2 text-lg"></i>
@@ -179,6 +186,7 @@
                                 @if ($element->element_type_id !== 4) {{-- Los elementos que no son carpetas tienen botón de "View" --}}
                                 <button type="button"
                                         data-id="{{ $element->uuid }}"
+                                        data-type="{{ $element->element_type_id }}"
                                         class="text-blue-600 hover:text-blue-900 view-button px-3 py-1 rounded-md hover:bg-blue-100 transition duration-150 ease-in-out text-sm"
                                         onclick="event.stopPropagation()"> {{-- Detener propagación --}}
                                     <i class="fas fa-eye"></i> View
@@ -211,6 +219,7 @@
                     <label for="element_type_id" class="block text-gray-700 text-sm font-bold mb-2">Type:</label>
                     <select name="element_type_id" id="element_type_id" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
                         <option value="1" selected>Password</option>
+                        <option value="2">Text</option>
                         <option value="4">Folder</option>
                     </select>
                 </div>
@@ -220,7 +229,8 @@
                 </div>
                 <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
                     <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold mb-2">Content:</label>
-                    <input type="text" id="passwordPlain" name="content" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                    <input type="text" id="passwordPlain" name="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                    <textarea id="passwordPlainTextarea" name="passwordPlainTextarea" class="shadow border rounded w-full py-2 px-3 text-gray-700 hidden" rows="5"></textarea>
                 </div>
 
                 {{-- Campos ocultos para la encriptación, siempre presentes para passwords --}}
@@ -299,11 +309,20 @@
                 {{-- Decrypted element display as a read-only input --}}
                 <div class="mt-4">
                     <label for="decryptedPasswordInput" class="block mb-2 text-sm text-gray-600">Decrypted Element:</label>
-                    <div class="flex items-center space-x-2">
+                    <div id="decryptedPasswordInputWrapper" class="flex items-center space-x-2">
                         <input type="text" id="decryptedPasswordInput" 
                                class="w-full p-2 border rounded text-gray-800 break-all bg-gray-50" 
                                readonly>
                         <button id="copyPasswordBtn" 
+                                class="bg-gray-200 text-gray-700 px-3 py-2 rounded hover:bg-gray-300 transition duration-150 ease-in-out"
+                                title="Copy to clipboard">
+                            <i class="far fa-copy"></i>
+                        </button>
+                    </div>
+                    {{-- Textarea for text type --}}
+                    <div id="decryptedPasswordTextareaWrapper" class="flex items-center space-x-2 hidden">
+                        <textarea id="decryptedPasswordTextarea" rows="8" class="w-full p-2 border rounded text-gray-800 break-all bg-gray-50" readonly></textarea>
+                        <button id="copyPasswordTextareaBtn" 
                                 class="bg-gray-200 text-gray-700 px-3 py-2 rounded hover:bg-gray-300 transition duration-150 ease-in-out"
                                 title="Copy to clipboard">
                             <i class="far fa-copy"></i>
@@ -378,7 +397,17 @@
         });
 
         document.getElementById("confirmEncryption").addEventListener("click", async () => {
-            const plaintext = document.getElementById("passwordPlain").value;
+            // Check element type -- encrypt the plaintext depending on the type
+            const elementType = document.getElementById("element_type_id").value;
+            let plaintext;
+            switch (elementType) {
+                case "1":
+                    plaintext = document.getElementById("passwordPlain").value;
+                    break;
+                case "2":
+                    plaintext = document.getElementById("passwordPlainTextarea").value;
+                    break;
+            }
             const passphrase = masterKeyInput.value;
 
             if (!passphrase || !plaintext) {
@@ -397,6 +426,7 @@
 
                 // Clean plaintext input and master key
                 document.getElementById("passwordPlain").value = '';
+                document.getElementById("passwordPlainTextarea").value = '';  // Both fields are cleared
                 masterKeyInput.value = '';
                 encryptionModal.classList.add("hidden");
                 form.submit();
@@ -411,8 +441,10 @@
         const viewModal = document.getElementById('viewModal');
         const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
         const decryptBtn = document.getElementById('decryptBtn');
-        const decryptedPasswordInput = document.getElementById('decryptedPasswordInput'); 
-        const copyPasswordBtn = document.getElementById('copyPasswordBtn');       
+        const decryptedPasswordInput = document.getElementById('decryptedPasswordInput');        
+        const decryptedPasswordTextarea = document.getElementById('decryptedPasswordTextarea');
+        const copyPasswordBtn = document.getElementById('copyPasswordBtn');      
+        const copyPasswordTextareaBtn = document.getElementById('copyPasswordTextareaBtn');
         const countdownDisplay = document.getElementById('countdown'); 
 
         let currentPasswordData = {};
@@ -426,7 +458,9 @@
             clearInterval(countdownTimer);
             countdownDisplay.textContent = '';
             copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
+            copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
             decryptedPasswordInput.value = '';
+            decryptedPasswordTextarea.value = '';
             viewMasterKeyInput.value = '';
         }
         
@@ -440,11 +474,26 @@
         viewButtons.forEach(button => {
             button.addEventListener('click', async () => {
                 const elementId = button.dataset.id;
+                const elementType = button.dataset.type;
                 viewModal.classList.remove('hidden');
                 clearInterval(countdownTimer); 
                 countdownDisplay.textContent = '';
                 decryptedPasswordInput.value = ''; // Clear previous decrypted password
+                decryptedPasswordTextarea.value = ''; // Clear previous decrypted password
                 viewMasterKeyInput.value = ''; // Clear master key input
+
+                // Check if the element is a text type
+                if (elementType === '2') {
+                    decryptedPasswordTextarea.classList.remove('hidden');
+                    decryptedPasswordInput.classList.add('hidden');
+                    decryptedPasswordTextareaWrapper.classList.remove('hidden');
+                    decryptedPasswordInputWrapper.classList.add('hidden');
+                } else {
+                    decryptedPasswordTextarea.classList.add('hidden');
+                    decryptedPasswordInput.classList.remove('hidden');
+                    decryptedPasswordTextareaWrapper.classList.add('hidden');
+                    decryptedPasswordInputWrapper.classList.remove('hidden');
+                }
 
                 try {
                     const response = await fetch(`/myaccount/elements/get/${elementId}`);
@@ -468,6 +517,7 @@
                 } catch (error) {
                     console.error('Error fetching password data:', error);
                     decryptedPasswordInput.value = "❌ Error loading password data.";
+                    decryptedPasswordTextarea.value = "❌ Error loading password data.";
                 }
             });
         });
@@ -477,6 +527,7 @@
 
             if (!masterKey) {
                 decryptedPasswordInput.value = "Please enter the master key.";
+                decryptedPasswordTextarea.value = "Please enter the master key.";
                 return;
             }
 
@@ -484,12 +535,14 @@
 
             if (!content || !iv || !salt || !hmac) {
                 decryptedPasswordInput.value = "❌ Password data not available. Try again.";
+                decryptedPasswordTextarea.value = "❌ Password data not available. Try again.";
                 return;
             }
 
             try {
                 const decrypted = await decryptData(content, masterKey, iv, salt, hmac, iterations);
                 decryptedPasswordInput.value = decrypted;
+                decryptedPasswordTextarea.value = decrypted;
                 viewMasterKeyInput.value = ''; // Clear master key input
                 if (window.gc) window.gc(); // Force garbage collection if available
 
@@ -508,6 +561,7 @@
             } catch (e) {
                 console.error("Error during decryption:", e);
                 decryptedPasswordInput.value = "❌ Decryption failed: " + e.message;
+                decryptedPasswordTextarea.value = "❌ Decryption failed: " + e.message;
                 clearInterval(countdownTimer); 
                 countdownDisplay.textContent = '';
             }
@@ -525,6 +579,19 @@
                 alert('Failed to copy password. Please try again or copy manually.');
             }
         });
+
+        copyPasswordTextareaBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(decryptedPasswordTextarea.value);
+                copyPasswordTextareaBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => {
+                    copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy password. Please try again or copy manually.');
+            }
+        });
     </script>
 
 
@@ -535,6 +602,7 @@
             const keyLabel = document.getElementById('keyLabel');
             const contentFieldWrapper = document.getElementById('contentFieldWrapper');
             const passwordPlainInput = document.getElementById('passwordPlain');
+            const passwordPlainTextarea = document.getElementById('passwordPlainTextarea');
 
             function updateFormFields() {
                 const selectedValue = elementTypeSelect.value;
@@ -544,16 +612,26 @@
                     keyLabel.textContent = 'Element name (key):';
                     contentFieldWrapper.classList.remove('hidden'); // Show content field
                     passwordPlainInput.setAttribute('required', 'required'); // Make it required
-                    passwordPlainInput.name = 'passwordPlain'; // Ensure the name is 'passwordPlain'
-                    passwordPlainInput.id = 'passwordPlain'; // Restore the ID if necessary
+                    passwordPlainInput.classList.remove('hidden'); // Show the textarea
+                    passwordPlainTextarea.removeAttribute('required');
+                    passwordPlainTextarea.classList.add('hidden'); // Hide the textarea
+                }
+                // Type 2: Text
+                else if (selectedValue === '2') {
+                    keyLabel.textContent = 'Element name (key):';
+                    contentFieldWrapper.classList.remove('hidden'); // Show content field
+                    passwordPlainInput.removeAttribute('required');
+                    passwordPlainInput.classList.add('hidden'); // Hide the textarea
+                    passwordPlainTextarea.setAttribute('required', 'required');
+                    passwordPlainTextarea.classList.remove('hidden'); // Show the textarea
                 }
                 // Type 4: Folder
                 else if (selectedValue === '4') {
                     keyLabel.textContent = 'Folder name:'; // Change the label text
                     contentFieldWrapper.classList.add('hidden'); // Hide the content field
                     passwordPlainInput.removeAttribute('required'); // Not required
-                    passwordPlainInput.name = ''; // Remove the 'name' attribute so it's not sent to the server
-                    passwordPlainInput.value = ''; // Clear the value to avoid residual data
+                    passwordPlainTextarea.removeAttribute('required');
+                    passwordPlainTextarea.classList.add('hidden'); // Hide the textarea
                 }
             }
 

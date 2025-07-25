@@ -15,7 +15,6 @@ Please note this software won't work without HTTPS, since it uses WebCrypto.
 
 Data organization should be stable so that nothing is lost with updates.
 * Maybe include some visible iteration information on files.
-* Add texts to the types of encrypted elements, dynamically creating a textarea for them instead of a small text field.
 * Final security assessment before the database and algorithms are set in stone.
 
 ⚙️ TODO further

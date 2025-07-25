@@ -55,9 +55,11 @@ class ElementController extends Controller
 
     public function store(Request $request)
     {
+//dd($request->all());        
         try {
             switch($request->element_type_id) {
                 case 1:
+                case 2:
                     $request->validate([
                         'key' => 'required|string|max:255',
                         'passwordEncrypted' => 'required|string',
@@ -66,7 +68,7 @@ class ElementController extends Controller
                         'hmac' => 'required|string',
                         'iterations' => 'required|integer',
                     ]);
-                    break;
+                    break;                
                 case 4:
                     $request->validate([
                         'key' => 'required|string|max:255',
@@ -76,12 +78,14 @@ class ElementController extends Controller
                     return redirect()->route('account.elements')->with('error', 'Invalid element type.');
             }
         } catch (\Exception $e) {
+//dd($e);            
             return redirect()->route('account.elements')->with('error', 'Error adding element: ' . $e->getMessage());
         }
 
         // Create the element
         switch($request->element_type_id) {
             case 1:
+            case 2:
                 $element = new Element();
                 $element->uuid = Str::uuid();
                 $element->key = $request->key;
@@ -90,7 +94,7 @@ class ElementController extends Controller
                 $element->salt = $request->salt;
                 $element->hmac = $request->hmac;
                 $element->user_id = $request->user()->id;
-                $element->element_type_id = 1;
+                $element->element_type_id = $request->element_type_id;
                 $element->parent = $request->parent;
                 $element->iterations = $request->iterations;
                 $element->save();
