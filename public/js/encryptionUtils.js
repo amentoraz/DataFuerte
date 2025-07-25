@@ -130,6 +130,54 @@ export class SecureString {
     }
 }
 
+
+/**
+ * Derives AES and HMAC keys from a passphrase using PBKDF2
+ * @param {string|Uint8Array} passphrase - Raw password or byte-encoded passphrase
+ * @param {Uint8Array} salt - Random salt
+ * @param {number} iterations - Number of PBKDF2 iterations
+ * @returns {Promise<{aesKey: CryptoKey, hmacKey: CryptoKey}>}
+ */
+async function deriveKeys(encoder, passphrase, salt, iterations) {
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        typeof passphrase === "string" ? encoder.encode(passphrase) : passphrase,
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+
+    const aesKey = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt,
+            iterations,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
+
+    const hmacKey = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt,
+            iterations,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign", "verify"]
+    );
+
+    return { aesKey, hmacKey };
+}
+
+
+
 /**
  * Encrypts plaintext data using a master key, a randomly generated salt, and IV.
  *
@@ -152,40 +200,7 @@ export async function encryptData(plaintext, passphrase, iterationAmount) {
         const salt = crypto.getRandomValues(new Uint8Array(16));
         const iv = crypto.getRandomValues(new Uint8Array(12));
 
-        const keyMaterial = await crypto.subtle.importKey(
-            "raw",
-            new TextEncoder().encode(securePassphrase.getValue()),
-            { name: "PBKDF2" },
-            false,
-            ["deriveKey"]
-        );
-
-        const key = await crypto.subtle.deriveKey(
-            {
-                name: "PBKDF2",
-                salt: salt,
-                iterations: iterationAmount,
-                hash: "SHA-256"
-            },
-            keyMaterial,
-            { name: "AES-GCM", length: 256 },
-            false,
-            ["encrypt"]
-        );
-
-        // Derivate the HMAC key
-        const hmacKey = await crypto.subtle.deriveKey(
-            {
-                name: "PBKDF2",
-                salt: salt,
-                iterations: iterationAmount,
-                hash: "SHA-256"
-            },
-            keyMaterial,
-            { name: "HMAC", hash: "SHA-256" },
-            false,
-            ["sign"]
-        );
+        const { aesKey: key, hmacKey } = await deriveKeys(new TextEncoder(), securePassphrase.getValue(), salt, iterationAmount);
 
         // Encrypt the plaintext
         const encrypted = await crypto.subtle.encrypt(
@@ -237,7 +252,6 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmac
         // Create secure container for the master key
         secureMasterKey = new SecureString(masterKey, 5000); // 5 seconds max
 
-        const encoder = new TextEncoder();
         const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
         const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
         const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
@@ -245,41 +259,7 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmac
         // hmac received
         const hmacReceived = Uint8Array.from(atob(hmacB64), c => c.charCodeAt(0));
 
-        const keyMaterial = await crypto.subtle.importKey(
-            "raw",
-            encoder.encode(secureMasterKey.getValue()),
-            { name: "PBKDF2" },
-            false,
-            ["deriveKey"]
-        );
-
-        // Derivate the AES key
-        const key = await crypto.subtle.deriveKey(
-            {
-                name: "PBKDF2",
-                salt: salt,
-                iterations: iterationAmount,
-                hash: "SHA-256"
-            },
-            keyMaterial,
-            { name: "AES-GCM", length: 256 },
-            false,
-            ["decrypt"]
-        );
-
-        // Derivate the HMAC key
-        const hmacKey = await crypto.subtle.deriveKey(
-            {
-                name: "PBKDF2",
-                salt: salt,
-                iterations: iterationAmount,
-                hash: "SHA-256"
-            },
-            keyMaterial,
-            { name: "HMAC", hash: "SHA-256" },
-            false,
-            ["verify"]
-        );
+        const { aesKey: key, hmacKey } = await deriveKeys(new TextEncoder(), secureMasterKey.getValue(), salt, iterationAmount);
 
         // Verify HMAC before decrypting
         const dataToVerify = new Uint8Array([...ciphertext, ...iv, ...salt]);
