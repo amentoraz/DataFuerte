@@ -359,7 +359,7 @@
 
     <script type="module">
         // Import functions from the utility file
-        import { encryptData, decryptData, validateBase64 } from '{{ asset('js/encryptionUtils.js') }}';
+        import { encryptData, decryptData, validateBase64, secureWipe, secureWipeMultiple, SecureString } from '{{ asset('js/encryptionUtils.js') }}';
 
         document.addEventListener('DOMContentLoaded', function () {
             const deleteButtons = document.querySelectorAll('.delete-button');
@@ -388,7 +388,7 @@
 
         // --- Add Password (Encryption) Logic ---
         const form = document.getElementById("elementForm");
-        const encryptionModal = document.getElementById("modal"); // Renamed to avoid conflict
+        const encryptionModal = document.getElementById("modal");
         const masterKeyInput = document.getElementById("masterKey");
 
         form.addEventListener("submit", (e) => {
@@ -404,22 +404,27 @@
         });
 
         document.getElementById("cancelModal").addEventListener("click", () => {
+            // *** IMPLEMENTACIÓN SEGURA ***
+            secureWipe(masterKeyInput);
             encryptionModal.classList.add("hidden");
-            masterKeyInput.value = '';
         });
 
         document.getElementById("confirmEncryption").addEventListener("click", async () => {
-            // Check element type -- encrypt the plaintext depending on the type
             const elementType = document.getElementById("element_type_id").value;
             let plaintext;
+            let plaintextElement;
+            
             switch (elementType) {
                 case "1":
                     plaintext = document.getElementById("passwordPlain").value;
+                    plaintextElement = document.getElementById("passwordPlain");
                     break;
                 case "2":
                     plaintext = document.getElementById("passwordPlainTextarea").value;
+                    plaintextElement = document.getElementById("passwordPlainTextarea");
                     break;
             }
+            
             const passphrase = masterKeyInput.value;
 
             if (!passphrase || !plaintext) {
@@ -436,15 +441,21 @@
                 document.querySelector("input[name='hmac']").value = hmac;
                 document.querySelector("input[name='iterations']").value = {{ $iterations }};
 
-                // Clean plaintext input and master key
-                document.getElementById("passwordPlain").value = '';
-                document.getElementById("passwordPlainTextarea").value = '';  // Both fields are cleared
-                masterKeyInput.value = '';
+                // *** IMPLEMENTACIÓN SEGURA - LIMPIEZA COMPLETA ***
+                secureWipeMultiple(
+                    plaintextElement,
+                    masterKeyInput
+                );
+                
                 encryptionModal.classList.add("hidden");
                 form.submit();
+                
             } catch (error) {
                 console.error("Encryption error:", error);
                 alert("Error encrypting password. Please try again.");
+                
+                // *** LIMPIAR EN CASO DE ERROR ***
+                secureWipeMultiple(plaintextElement, masterKeyInput);
             }
         });
 
@@ -461,19 +472,30 @@
 
         let currentPasswordData = {};
         let countdownTimer;
+        let secureDecryptedData = null; // *** VARIABLE PARA DATOS SEGUROS ***
 
-        // Clean everything when closing modal
-        window.closeModal = function() { // Make it global so onclick in HTML can call it
+        // *** FUNCIÓN DE LIMPIEZA MEJORADA ***
+        window.closeModal = function() {
             viewModal.classList.add('hidden');
-            viewMasterKeyInput.value = '';
+            
+            // Limpiar todos los elementos sensibles de forma segura
+            secureWipeMultiple(
+                viewMasterKeyInput,
+                decryptedPasswordInput,
+                decryptedPasswordTextarea
+            );
+            
+            // Limpiar datos seguros
+            if (secureDecryptedData) {
+                secureDecryptedData.destroy();
+                secureDecryptedData = null;
+            }
+            
             currentPasswordData = {};
             clearInterval(countdownTimer);
             countdownDisplay.textContent = '';
             copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
             copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
-            decryptedPasswordInput.value = '';
-            decryptedPasswordTextarea.value = '';
-            viewMasterKeyInput.value = '';
         }
         
         // Close modal when clicking outside of it
@@ -483,16 +505,39 @@
             }
         });
 
+        // *** EVENTO PARA LIMPIAR CUANDO SE PIERDE EL FOCO ***
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && !viewModal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+
+        // *** EVENTO PARA LIMPIAR AL CAMBIAR DE VENTANA ***
+        window.addEventListener('blur', function() {
+            if (!viewModal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+
         viewButtons.forEach(button => {
             button.addEventListener('click', async () => {
                 const elementId = button.dataset.id;
                 const elementType = button.dataset.type;
                 viewModal.classList.remove('hidden');
+                
+                // *** LIMPIAR ESTADO ANTERIOR ***
+                if (secureDecryptedData) {
+                    secureDecryptedData.destroy();
+                    secureDecryptedData = null;
+                }
+                
                 clearInterval(countdownTimer); 
                 countdownDisplay.textContent = '';
-                decryptedPasswordInput.value = ''; // Clear previous decrypted password
-                decryptedPasswordTextarea.value = ''; // Clear previous decrypted password
-                viewMasterKeyInput.value = ''; // Clear master key input
+                secureWipeMultiple(
+                    decryptedPasswordInput,
+                    decryptedPasswordTextarea,
+                    viewMasterKeyInput
+                );
 
                 // Check if the element is a text type
                 if (elementType === '2') {
@@ -553,13 +598,18 @@
 
             try {
                 const decrypted = await decryptData(content, masterKey, iv, salt, hmac, iterations);
-                decryptedPasswordInput.value = decrypted;
-                decryptedPasswordTextarea.value = decrypted;
-                viewMasterKeyInput.value = ''; // Clear master key input
-                if (window.gc) window.gc(); // Force garbage collection if available
+                
+                // *** CREAR CONTENEDOR SEGURO PARA DATOS DESCIFRADOS ***
+                secureDecryptedData = new SecureString(decrypted, 30000); // 30 segundos máximo
+                
+                decryptedPasswordInput.value = secureDecryptedData.getValue();
+                decryptedPasswordTextarea.value = secureDecryptedData.getValue();
+                
+                // *** LIMPIAR MASTER KEY INMEDIATAMENTE ***
+                secureWipe(viewMasterKeyInput);
 
                 clearInterval(countdownTimer); 
-                let timeLeft = 10;
+                let timeLeft = 30; // *** REDUCIDO A 30 SEGUNDOS ***
                 countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
                 
 
@@ -570,10 +620,14 @@
                         closeModal();
                     }
                 }, 1000);
+                
             } catch (e) {
                 console.error("Error during decryption:", e);
                 decryptedPasswordInput.value = "❌ Decryption failed: " + e.message;
                 decryptedPasswordTextarea.value = "❌ Decryption failed: " + e.message;
+                
+                // *** LIMPIAR EN CASO DE ERROR ***
+                secureWipe(viewMasterKeyInput);
                 clearInterval(countdownTimer); 
                 countdownDisplay.textContent = '';
             }
@@ -581,7 +635,14 @@
 
         copyPasswordBtn.addEventListener('click', async () => {
             try {
-                await navigator.clipboard.writeText(decryptedPasswordInput.value);
+                let textToCopy = '';
+                if (secureDecryptedData && !secureDecryptedData._destroyed) {
+                    textToCopy = secureDecryptedData.getValue();
+                } else {
+                    textToCopy = decryptedPasswordInput.value;
+                }
+                
+                await navigator.clipboard.writeText(textToCopy);
                 copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
                 setTimeout(() => {
                     copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
@@ -594,7 +655,14 @@
 
         copyPasswordTextareaBtn.addEventListener('click', async () => {
             try {
-                await navigator.clipboard.writeText(decryptedPasswordTextarea.value);
+                let textToCopy = '';
+                if (secureDecryptedData && !secureDecryptedData._destroyed) {
+                    textToCopy = secureDecryptedData.getValue();
+                } else {
+                    textToCopy = decryptedPasswordTextarea.value;
+                }
+                
+                await navigator.clipboard.writeText(textToCopy);
                 copyPasswordTextareaBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
                 setTimeout(() => {
                     copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
@@ -605,6 +673,9 @@
             }
         });
     </script>
+
+
+
 
 
     <script>
