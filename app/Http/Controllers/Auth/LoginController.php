@@ -22,7 +22,8 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-            return redirect()->intended('/myaccount/passwords');
+            //return redirect()->intended('/myaccount/elements');
+            return redirect()->to('/myaccount/elements');
         }
 
         return back()->withErrors([

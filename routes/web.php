@@ -32,7 +32,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/myaccount/elements/{uuid?}', [ElementController::class, 'index'])->name('account.elements');
         Route::post('/myaccount/elements/store', [ElementController::class, 'store'])->name('elements.store');
         Route::delete('/myaccount/elements/{id}', [ElementController::class, 'delete'])->name('elements.delete');
-        Route::get('/myaccount/elements/get/{uuid}', [ElementController::class, 'get'])->name('elements.get');
+        Route::get('/myaccount/elements/get/{uuid}', [ElementController::class, 'get'])->name('elements.get')->middleware('throttle:get-element');
     });
 });
 

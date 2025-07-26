@@ -128,6 +128,7 @@ class ElementController extends Controller
 
     public function get(Request $request, $uuid) 
     {
+
         // We get password data from database (only if it belongs to current user)
         $element = Element::find($uuid);
         if ($element->user_id !== $request->user()->id) {
