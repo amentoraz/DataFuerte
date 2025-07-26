@@ -10,9 +10,9 @@ use App\Models\Log;
 class ElementController extends Controller
 {
 
-    public function index(Request $request, $uuid = 0)
+    public function index(Request $request, $uuid = "0")
     {        
-        
+       
         // Retrieve all elements related with current user
         $elements = Element::where('user_id', $request->user()->id)
             ->where('parent', $uuid)
