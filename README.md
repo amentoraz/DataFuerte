@@ -13,8 +13,6 @@ Please note this software won't work without HTTPS, since it uses WebCrypto.
 
 ⚙️ TODO further
 
-* Activity logs when login
-* New tab that shows your own logs
 * Search filters for passwords/texts/files, name search and tag search.
 * Automatic installation script.
 * Add files to the types of encrypted elements.
