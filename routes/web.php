@@ -18,9 +18,13 @@ use App\Http\Controllers\ConfigurationController;
 */
 
 
-
+// Login
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/', [LoginController::class, 'login']);
+
+// Logout
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
 
 Route::middleware(['auth'])->group(function () {
 
@@ -41,11 +45,11 @@ Route::middleware(['auth'])->group(function () {
 
 
 // Return current user
-Route::get('/debug-user', function (Request $request) {
-    return $request->user() ?? 'No hay usuario autenticado';
-})->middleware('auth');
+//Route::get('/debug-user', function (Request $request) {
+//    return $request->user() ?? 'No hay usuario autenticado';
+//})->middleware('auth');
 
 
 
 
-require __DIR__.'/auth.php';
+//require __DIR__.'/auth.php';

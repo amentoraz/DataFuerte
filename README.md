@@ -11,15 +11,9 @@ Please note this software won't work without HTTPS, since it uses WebCrypto.
 ⚠️ **Basic functionality still on development** ⚠️
 ---
 
-- Text model removed
-- Added migration for a "logs" table
-- Added "Log" model
-- System logs every access to an element
-- System logs every failed auth attempt
-
 ⚙️ TODO further
 
-* Activity logs when elements are accessed
+* Activity logs when login
 * New tab that shows your own logs
 * Search filters for passwords/texts/files, name search and tag search.
 * Automatic installation script.
