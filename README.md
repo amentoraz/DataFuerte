@@ -11,20 +11,15 @@ Please note this software won't work without HTTPS, since it uses WebCrypto.
 ⚠️ **Basic functionality still on development** ⚠️
 ---
 
-NEXT COMMIT
-- Rate limiting (20 per minute) to item retrieval
-- Rate limiting (5 per minute) to login
-- Removed auth routes not strictly of login/logout (register, verify, reset password, etc) from auth
-- Fixed CORS configuration (:3000)
-
-
-
-x Fix problems with login not redirecting you correctly
-x Activity logs when elements are accessed
-
+- Text model removed
+- Added migration for a "logs" table
+- Added "Log" model
+- System logs every access to an element
+- System logs every failed auth attempt
 
 ⚙️ TODO further
 
+* Activity logs when elements are accessed
 * New tab that shows your own logs
 * Search filters for passwords/texts/files, name search and tag search.
 * Automatic installation script.

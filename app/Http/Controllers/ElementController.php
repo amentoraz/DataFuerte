@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Element;
 use App\Models\Configuration;
 use Illuminate\Support\Str;
-
+use App\Models\Log;
 class ElementController extends Controller
 {
 
@@ -129,9 +129,31 @@ class ElementController extends Controller
     public function get(Request $request, $uuid) 
     {
 
+        // We log the access to the element
+        $log = new Log();
+        $log->user_id = $request->user()->id;
+        $log->action = 'get';
+        $log->loggable_type = 'App\Models\Element';
+        $log->loggable_id = $uuid;
+        $log->ip_address = $request->ip();
+        $log->user_agent = $request->userAgent();
+        $log->save();
+
         // We get password data from database (only if it belongs to current user)
         $element = Element::find($uuid);
         if ($element->user_id !== $request->user()->id) {
+
+            $log->user_id = $request->user()->id;
+            $log->action = 'get';
+            $log->loggable_type = 'App\Models\Element';
+            $log->loggable_id = $uuid;
+            $log->data = "Unauthorized access to element $uuid";
+            $log->ip_address = $request->ip();
+            $log->user_agent = $request->userAgent();
+            $log->severity = 'WARNING';
+            $log->save();
+
+
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         // We print it in JSON
