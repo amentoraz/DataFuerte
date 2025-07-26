@@ -6,14 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Element;
 use App\Models\Configuration;
 use Illuminate\Support\Str;
-
+use App\Models\Log;
 class ElementController extends Controller
 {
-
-    // *******************************************
-    //               Password zone
-    // *******************************************
-
 
     public function index(Request $request, $uuid = 0)
     {        
@@ -55,7 +50,7 @@ class ElementController extends Controller
 
     public function store(Request $request)
     {
-//dd($request->all());        
+   
         try {
             switch($request->element_type_id) {
                 case 1:
@@ -121,6 +116,28 @@ class ElementController extends Controller
 
     public function delete(Request $request, $uuid)
     {
+        // We delete element data from database (only if it belongs to current user)
+        $element = Element::find($uuid);
+        if ($element->user_id !== $request->user()->id) {
+
+            $log->user_id = $request->user()->id;
+            $log->action = 'delete';
+            $log->loggable_type = 'App\Models\Element';
+            $log->loggable_id = $uuid;
+            $logData = [
+                'message' => "Unauthorized deletion of element $uuid",
+                'element_id' => $uuid,
+            ];
+            $log->data = json_encode($logData); // Convert the array to a JSON string
+            $log->ip_address = $request->ip();
+            $log->user_agent = $request->userAgent();
+            $log->severity = 'WARNING';
+            $log->save();
+
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+
         $element = Element::find($uuid);
         $element->delete();
         return redirect()->route('account.elements')->with('success', 'Element removed.');;
@@ -128,9 +145,36 @@ class ElementController extends Controller
 
     public function get(Request $request, $uuid) 
     {
+
+        // We log the access to the element
+        $log = new Log();
+        $log->user_id = $request->user()->id;
+        $log->action = 'get';
+        $log->loggable_type = 'App\Models\Element';
+        $log->loggable_id = $uuid;
+        $log->ip_address = $request->ip();
+        $log->user_agent = $request->userAgent();
+        $log->save();
+
         // We get password data from database (only if it belongs to current user)
         $element = Element::find($uuid);
         if ($element->user_id !== $request->user()->id) {
+
+            $log->user_id = $request->user()->id;
+            $log->action = 'get';
+            $log->loggable_type = 'App\Models\Element';
+            $log->loggable_id = $uuid;
+            $logData = [
+                'message' => "Unauthorized access to element $uuid",
+                'element_id' => $uuid,
+            ];
+            $log->data = json_encode($logData); // Convert the array to a JSON string
+            $log->ip_address = $request->ip();
+            $log->user_agent = $request->userAgent();
+            $log->severity = 'WARNING';
+            $log->save();
+
+
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         // We print it in JSON

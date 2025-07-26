@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ElementController;
 use App\Http\Controllers\ConfigurationController;
+use App\Http\Controllers\LogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,21 +19,30 @@ use App\Http\Controllers\ConfigurationController;
 */
 
 
-
+// Login
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/', [LoginController::class, 'login']);
 
+// Logout
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+
 Route::middleware(['auth'])->group(function () {
 
+    // Configuration
     Route::get('/configuration', [ConfigurationController::class, 'index'])->name('configuration.index');
     Route::post('/configuration', [ConfigurationController::class, 'store'])->name('configuration.store');
     
 
     Route::middleware(['installation'])->group(function () {
+        // Elements
         Route::get('/myaccount/elements/{uuid?}', [ElementController::class, 'index'])->name('account.elements');
         Route::post('/myaccount/elements/store', [ElementController::class, 'store'])->name('elements.store');
         Route::delete('/myaccount/elements/{id}', [ElementController::class, 'delete'])->name('elements.delete');
-        Route::get('/myaccount/elements/get/{uuid}', [ElementController::class, 'get'])->name('elements.get');
+        Route::get('/myaccount/elements/get/{uuid}', [ElementController::class, 'get'])->name('elements.get')->middleware('throttle:get-element');
+
+        // Logs
+        Route::get('/myaccount/logs', [LogController::class, 'index'])->name('logs.index');
     });
 });
 
@@ -41,11 +51,11 @@ Route::middleware(['auth'])->group(function () {
 
 
 // Return current user
-Route::get('/debug-user', function (Request $request) {
-    return $request->user() ?? 'No hay usuario autenticado';
-})->middleware('auth');
+//Route::get('/debug-user', function (Request $request) {
+//    return $request->user() ?? 'No hay usuario autenticado';
+//})->middleware('auth');
 
 
 
 
-require __DIR__.'/auth.php';
+//require __DIR__.'/auth.php';
