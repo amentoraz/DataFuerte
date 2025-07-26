@@ -10,11 +10,6 @@ use App\Models\Log;
 class ElementController extends Controller
 {
 
-    // *******************************************
-    //               Password zone
-    // *******************************************
-
-
     public function index(Request $request, $uuid = 0)
     {        
         
@@ -55,7 +50,7 @@ class ElementController extends Controller
 
     public function store(Request $request)
     {
-//dd($request->all());        
+   
         try {
             switch($request->element_type_id) {
                 case 1:
