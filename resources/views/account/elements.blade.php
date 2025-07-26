@@ -11,8 +11,7 @@
         @include('partials.header')
     </div>
 
-    <!-- Tabs -->
-    
+    <!-- Tabs -->    
     @include('partials.pestanyas')
     
 
@@ -44,7 +43,9 @@
             </div>
         @endif
 
-
+        
+            <h4 class="text-md font-bold mb-4 text-gray-800">Current Directory: {{ $currentDirectory }}</h4>
+        
 
         @if ($elements->isEmpty())
             <p class="text-red-600 pb-4">There are no passwords registered yet.</p>
