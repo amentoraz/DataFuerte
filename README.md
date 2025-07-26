@@ -38,6 +38,12 @@ Here’s how the encryption process works:
 
 **Please note this software won't work without HTTPS, since it uses WebCrypto.**
 
+### 0. Git clone
+
+```bash
+git clone https://github.com/amentoraz/DataFuerte.git
+```
+
 ### 1. Create the database
 
 Login to MySQL:
@@ -62,13 +68,16 @@ You will need at least:
 
 ```ini
 APP_NAME=Datafuerte
-APP_URL=http://datafuerte.local
+APP_URL=https://datafuerte.local
+APP_ENV=production
+APP_DEBUG=false
+
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=datafuerte
-DB_USERNAME=your_user
+DB_USERNAME=user_datafuerte
 DB_PASSWORD=your_pass
 
 # This will be the data for your admin user
@@ -77,25 +86,41 @@ SEED_USER_EMAIL=admin@example.com
 SEED_USER_PASSWORD=password
 
 # More stuff you may want to configure according to your domain
-APP_URL=http://datafuerte.local
+APP_URL=https://datafuerte.local
 SESSION_DOMAIN=datafuerte.local
 ```
 
 
-### 3. Generate your APP KEY
-
-```bash
-php artisan key:generate
-```
-
-
-### 4. Install vendor dependencies
+### 3. Install vendor dependencies
 
 From the root directory:
 
 ```bash
 composer install
 ```
+
+or
+
+```bash
+composer update
+```
+
+If you have version problems, download it directly from getcomposer.org.
+Optionally check the hash of the installer.
+
+```bash
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+php composer-setup.php
+sudo mv composer.phar /usr/local/bin/composer
+php -r "unlink('composer-setup.php');"
+```
+
+### 4. Generate your APP KEY
+
+```bash
+php artisan key:generate
+```
+
 
 
 ### 5. Run migrations to prepare the database
@@ -111,6 +136,8 @@ php artisan migrate
 ```bash
 php artisan db:seed
 ```
+
+You can also then remove the .env entry SEED_USER_PASSWORD for further security (not to have this password in plaintext!)
 
 
 ### 7. Configure HTTPS domain
