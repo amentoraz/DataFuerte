@@ -126,11 +126,14 @@
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     @endif
+                                    @if ( (($element->has_children == 0) && ($element->element_type_id == 4))
+                                          || ($element->element_type_id != 4))
                                     <button type="button"
                                             data-id="{{ $element->uuid }}"
                                             class="text-red-600 hover:text-red-900 delete-button p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach                        

@@ -7,6 +7,8 @@ use App\Models\Element;
 use App\Models\Configuration;
 use Illuminate\Support\Str;
 use App\Models\Log;
+use Illuminate\Support\Facades\DB; 
+
 class ElementController extends Controller
 {
 
@@ -16,8 +18,14 @@ class ElementController extends Controller
         // Retrieve all elements related with current user
         $elements = Element::where('user_id', $request->user()->id)
             ->where('parent', $uuid)
-            ->orderBy('key', 'asc')            
-            ->paginate(10);       
+            ->orderBy('key', 'asc')
+            ->select('*') // Select all existing columns
+            ->selectSub(function ($query) {
+                $query->select(DB::raw('count(*) > 0'))
+                    ->from('elements as children')
+                    ->whereColumn('children.parent', 'elements.uuid');
+            }, 'has_children') // Add a new column 'has_children'
+            ->paginate(10);
 
         // If $uuid != 0, we are not in the root folder
         if ($uuid != 0) {
