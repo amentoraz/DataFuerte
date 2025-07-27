@@ -15,6 +15,7 @@ class ElementController extends Controller
     public function index(Request $request, $uuid = "0")
     {        
        
+        $elements_per_page = Configuration::where('user_id', $request->user()->id)->where('parameter', 'elements_per_page')->first();
         // Retrieve all elements related with current user
         $elements = Element::where('user_id', $request->user()->id)
             ->where('parent', $uuid)
@@ -25,7 +26,7 @@ class ElementController extends Controller
                     ->from('elements as children')
                     ->whereColumn('children.parent', 'elements.uuid');
             }, 'has_children') // Add a new column 'has_children'
-            ->paginate(10);
+            ->paginate($elements_per_page->value);
 
         // If $uuid != 0, we are not in the root folder
         if ($uuid != 0) {
