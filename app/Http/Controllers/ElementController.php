@@ -10,9 +10,9 @@ use App\Models\Log;
 class ElementController extends Controller
 {
 
-    public function index(Request $request, $uuid = 0)
+    public function index(Request $request, $uuid = "0")
     {        
-        
+       
         // Retrieve all elements related with current user
         $elements = Element::where('user_id', $request->user()->id)
             ->where('parent', $uuid)
@@ -34,6 +34,16 @@ class ElementController extends Controller
             }
         }
 
+        // Current directory
+        $currentDirUuid = $uuid;        
+        $currentDirectory = "";
+        while ($currentDirUuid != 0) {
+            $currentDirectory = Element::find($currentDirUuid)->key."/".$currentDirectory;
+            $currentDirUuid = Element::find($currentDirUuid)->parent;
+        }
+        $currentDirectory = "/".$currentDirectory;
+
+
         // Get iterations from configuration
         $iterations = Configuration::where('user_id', $request->user()->id)->where('parameter', 'iterations')->first()->value;
 
@@ -43,7 +53,7 @@ class ElementController extends Controller
         // Get active tab
         $activeTab = 'elements';
 
-        return view('account.elements', compact('elements', 'user', 'uuid', 'activeTab', 'iterations'));
+        return view('account.elements', compact('elements', 'user', 'uuid', 'activeTab', 'iterations', 'currentDirectory'));
 
     }
 
