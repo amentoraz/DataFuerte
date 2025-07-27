@@ -60,6 +60,17 @@
                        >
             </div>
 
+
+            <div class="mb-4">
+                <label for="elements_per_page" class="block mb-2 text-sm text-gray-600">Elements per page</label>
+                <input type="number" name="elements_per_page" id="elements_per_page"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Enter number of elements per page"
+                       value="{{ $elements_per_page->value ?? 10 }}"
+                       min="1"
+                       >
+            </div>
+
             <div>
                 <button type="submit"
                         class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"> {{-- Added focus styles --}}

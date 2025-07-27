@@ -21,8 +21,11 @@ class ConfigurationController extends Controller
         // Number of iterations
         $iterations = Configuration::where('user_id', $request->user()->id)->where('parameter', 'iterations')->first();
 
+        // Number of elements per page
+        $elements_per_page = Configuration::where('user_id', $request->user()->id)->where('parameter', 'elements_per_page')->first();
 
-        return view('configuration.index', compact('configuration', 'user', 'activeTab', 'installed', 'iterations'));
+        return view('configuration.index', compact('configuration', 'user', 'activeTab', 'installed', 
+            'iterations', 'elements_per_page'));
     }
 
     public function store(Request $request)
@@ -32,9 +35,10 @@ class ConfigurationController extends Controller
             // Obtenemos iterations y lo validamos como integer
             $request->validate([
                 'iterations' => 'required|integer|min:100000',
+                'elements_per_page' => 'required|integer|min:1',
             ]);
             
-            // If not exists, create a new configuration
+            // If not exists, create a new iterations entry
             $existingIterations = Configuration::where('user_id', $request->user()->id)->where('parameter', 'iterations')->first();
             if (!$existingIterations) {
                 $configuration = new Configuration();
@@ -45,6 +49,19 @@ class ConfigurationController extends Controller
             } else {
                 $existingIterations->value = $request->iterations;
                 $existingIterations->save();
+            }
+
+            // If not exists, create a new pagination entry
+            $existingPagination = Configuration::where('user_id', $request->user()->id)->where('parameter', 'elements_per_page')->first();
+            if (!$existingPagination) {
+                $configuration = new Configuration();
+                $configuration->user_id = $request->user()->id;
+                $configuration->parameter = 'elements_per_page';
+                $configuration->value = $request->elements_per_page;
+                $configuration->save();
+            } else {
+                $existingPagination->value = $request->elements_per_page;
+                $existingPagination->save();
             }
 
             // Now for the "installed" parameter, we need to set it to 1

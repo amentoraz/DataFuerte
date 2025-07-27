@@ -39,7 +39,8 @@ class Kernel extends HttpKernel
         ],
 
         'auth' => [
-            \App\Http\Middleware\CheckInstallationStatus::class,
+            \App\Http\Middleware\Authenticate::class,
+            \App\Http\Middleware\CheckInstallationStatus::class,            
         ],
 
         'api' => [
