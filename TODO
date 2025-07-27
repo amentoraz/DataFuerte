@@ -1,6 +1,9 @@
 
 ⚙️ TODO
 
+* Password type should have password input type when adding
+* Rename an element, specially folders
+* Move an element to a folder, drag&drop.
 * Search filters for passwords/texts/files, name search and tag search.
 * Automatic installation script.
 * Add files to the types of encrypted elements.
