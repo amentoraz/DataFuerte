@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container mx-auto px-6">
+<div class="container mx-auto md:px-6">
 
     
     <div class="bg-white shadow-md rounded-lg p-6 mb-6">
