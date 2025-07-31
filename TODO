@@ -1,14 +1,19 @@
 
 ⚙️ TODO
 
-* Password type should have password input type when adding (?)
+* Multiple accounts support & management
+* Reconsider HMAC with encryption (redundancy)
+* Error refinement - failing a password tells you the problem is in HMAC.
 * Rename an element, specially folders
 * Move an element to a folder, drag&drop.
 * Search filters for passwords/texts/files, name search and tag search.
 * Automatic installation script.
+* Multi-language support.
+* Secure password generator on demand.
 * Add files to the types of encrypted elements.
 * Recommendations on Master Key creation (length, etc). Since it MUST be written everytime content is decrypted, now by design you can use different Master Keys. Probably this is a good idea.
 * If several algorithms are considered, they might be chosen in the general configuration and/or for each content.
 * File tags for the three kinds of content, to allow further organization.
 * CSP headers and other security mechanisms.
 * Fully APIfy the system to allow external clients for those who don't want to use the current frontend (?)
+* Password type should have password input type when adding (?)
