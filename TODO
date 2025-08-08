@@ -3,7 +3,6 @@
 
 * Multiple accounts support & management
 * Reconsider HMAC with encryption (redundancy)
-* Error refinement - failing a password tells you the problem is in HMAC.
 * Rename an element, specially folders
 * Move an element to a folder, drag&drop.
 * Search filters for passwords/texts/files, name search and tag search.

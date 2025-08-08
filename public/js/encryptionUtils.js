@@ -245,38 +245,98 @@ export async function decryptData(ciphertextB64, masterKey, ivB64, saltB64, hmac
     let secureMasterKey = null;
     
     try {
+        // Validación de parámetros
         if (!ciphertextB64 || !masterKey || !ivB64 || !saltB64 || !hmacB64) {
-            throw new Error("All decryption parameters are required.");
+            const missing = [];
+            if (!ciphertextB64) missing.push('ciphertext');
+            if (!masterKey) missing.push('masterKey');
+            if (!ivB64) missing.push('iv');
+            if (!saltB64) missing.push('salt');
+            if (!hmacB64) missing.push('hmac');
+            throw new Error(`Missing required parameters for decryption: ${missing.join(', ')}`);
+        }
+
+        // Validate base64 format of parameters
+        try {
+            atob(ciphertextB64);
+            atob(ivB64);
+            atob(saltB64);
+            atob(hmacB64);
+        } catch (e) {
+            throw new Error('Invalid base64 encoding in one or more parameters');
         }
 
         // Create secure container for the master key
         secureMasterKey = new SecureString(masterKey, 5000); // 5 seconds max
 
-        const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
-        const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
-        const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
-
-        // hmac received
-        const hmacReceived = Uint8Array.from(atob(hmacB64), c => c.charCodeAt(0));
-
-        const { aesKey: key, hmacKey } = await deriveKeys(new TextEncoder(), secureMasterKey.getValue(), salt, iterationAmount);
-
-        // Verify HMAC before decrypting
-        const dataToVerify = new Uint8Array([...ciphertext, ...iv, ...salt]);
-        const isValid = await crypto.subtle.verify("HMAC", hmacKey, hmacReceived, dataToVerify);
-
-        if (!isValid) {
-            throw new Error("HMAC verification failed - data may have been tampered with");
+        // Convert from base64 to Uint8Array
+        let ciphertext, iv, salt, hmacReceived;
+        try {
+            ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
+            iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+            salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
+            hmacReceived = Uint8Array.from(atob(hmacB64), c => c.charCodeAt(0));
+        } catch (e) {
+            throw new Error('Error decoding base64 parameters: ' + e.message);
         }
 
-        const decrypted = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv: iv },
-            key,
-            ciphertext
-        );
-        
-        return new TextDecoder().decode(decrypted);
+        // Verify parameter length
+        if (iv.length !== 12) {
+            throw new Error('Invalid IV length. Expected 12 bytes, got ' + iv.length);
+        }
+        if (salt.length !== 16) {
+            throw new Error('Invalid salt length. Expected 16 bytes, got ' + salt.length);
+        }
 
+        try {
+            // Derive keys
+            const { aesKey: key, hmacKey } = await deriveKeys(new TextEncoder(), secureMasterKey.getValue(), salt, iterationAmount);
+
+            // First try decrypting without verifying the HMAC
+            let decrypted;
+            try {
+                decrypted = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    ciphertext
+                );
+            } catch (decryptError) {
+                // If decryption fails, it's very likely that the key is incorrect
+                if (decryptError.name === 'OperationError') {
+                    throw new Error('INVALID_KEY: The provided key is incorrect');
+                }
+                throw new Error(`DECRYPTION_ERROR: ${decryptError.message}`);
+            }
+            
+            // If we get here, decryption was successful, now we verify the HMAC
+            // to ensure data integrity
+            const dataToVerify = new Uint8Array([...ciphertext, ...iv, ...salt]);
+            const isValid = await crypto.subtle.verify("HMAC", hmacKey, hmacReceived, dataToVerify);
+
+            if (!isValid) {
+                // If the HMAC does not match, the data may have been tampered with
+                throw new Error('DATA_TAMPERED: The encrypted data may have been tampered with');
+            }
+            
+            return new TextDecoder().decode(decrypted);
+        } catch (keyError) {
+            if (keyError.message.includes('HMAC_VERIFICATION_FAILED')) throw keyError;
+            throw new Error(`KEY_DERIVATION_ERROR: ${keyError.message}`);
+        }
+
+    } catch (error) {
+        // If the error was already formatted, rethrow it
+        if (error.message.startsWith('HMAC_VERIFICATION_FAILED:') || 
+            error.message.startsWith('DECRYPTION_') ||
+            error.message.startsWith('KEY_DERIVATION_') ||
+            error.message.includes('Invalid base64') ||
+            error.message.includes('Invalid IV') ||
+            error.message.includes('Invalid salt') ||
+            error.message.includes('Missing required')) {
+            throw error;
+        }
+        // For any other unexpected error
+        throw new Error(`UNEXPECTED_ERROR: ${error.message}`);
     } finally {
         // Clean the secure master key
         if (secureMasterKey) {
