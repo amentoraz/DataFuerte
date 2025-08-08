@@ -139,11 +139,15 @@
                                     @endif
                                     @if ( (($element->has_children == 0) && ($element->element_type_id == 4))
                                           || ($element->element_type_id != 4))
-                                    <button type="button"
-                                            data-id="{{ $element->uuid }}"
-                                            class="text-red-600 hover:text-red-900 delete-button p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                    <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="parent" value="{{ $uuid ?? '0' }}">
+                                        <button type="submit" 
+                                                class="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out focus:outline-none">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
                                     @endif
                                 </td>
                             </tr>
@@ -228,12 +232,15 @@
                                     <i class="fas fa-download"></i> Download
                                 </button>
                                 @endif
-                                <button type="button"
-                                        data-id="{{ $element->uuid }}"
-                                        class="text-red-600 hover:text-red-900 delete-button px-3 py-1 rounded-md hover:bg-red-100 transition duration-150 ease-in-out text-sm"
-                                        onclick="event.stopPropagation()">
-                                    <i class="fas fa-trash-alt"></i> Delete
-                                </button>
+                                <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');" onclick="event.stopPropagation(); event.stopImmediatePropagation();">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="parent" value="{{ $uuid ?? '0' }}">
+                                    <button type="submit" 
+                                            class="text-red-600 hover:text-red-900 px-3 py-1 rounded-md hover:bg-red-100 transition duration-150 ease-in-out text-sm focus:outline-none">
+                                        <i class="fas fa-trash-alt"></i> Delete
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     @endforeach

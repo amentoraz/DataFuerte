@@ -164,6 +164,9 @@ class ElementController extends Controller
 
     public function delete(Request $request, $uuid)
     {
+        // Get the parent folder from the request
+        $parentFolder = $request->query('parent', '0');
+        
         // We delete element data from database (only if it belongs to current user)
         $element = Element::find($uuid);
         if ($element->user_id !== $request->user()->id) {
@@ -208,10 +211,15 @@ class ElementController extends Controller
             }
         }
 
+        // Get the parent folder before deleting the element
+        $parentFolder = $element->parent ?? '0';
+        
         // Delete the database record
         $element->delete();
         
-        return redirect()->route('account.elements')->with('success', 'Element removed.');
+        // Redirect back to the same folder
+        return redirect()->route('account.elements', ['uuid' => $parentFolder])
+                         ->with('success', 'Element removed.');
     }
 
     /**
