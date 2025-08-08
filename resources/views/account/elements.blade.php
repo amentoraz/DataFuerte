@@ -87,6 +87,9 @@
                                         @case(2)
                                             <i class="fas fa-file-alt text-gray-500 mr-2"></i>
                                             @break
+                                        @case(3)
+                                            <i class="fas fa-file text-green-500 mr-2"></i>
+                                            @break
                                         @case(4)
                                             <i class="fas fa-folder text-blue-500 mr-2"></i>
                                             @break
@@ -118,21 +121,33 @@
                                     {{ $element->updated_at->format('d/m/Y H:i') }}
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap text-right text-sm font-medium action-buttons-cell">                           
-                                    @if ($element->element_type_id !== 4)
+                                    @if($element->element_type_id == 1 || $element->element_type_id == 2)
                                     <button type="button"
-                                            data-id="{{ $element->uuid }}"
+                                            data-uuid="{{ $element->uuid }}"
+                                            data-key="{{ $element->key }}"
                                             data-type="{{ $element->element_type_id }}"
                                             class="text-blue-600 hover:text-blue-900 view-button p-1 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-eye"></i>
                                     </button>
+                                    @elseif($element->is_file)
+                                    <button type="button"
+                                            data-uuid="{{ $element->uuid }}"
+                                            data-key="{{ $element->key }}"
+                                            class="download-button text-green-600 hover:text-green-900 p-1 rounded-full hover:bg-green-100 transition duration-150 ease-in-out">
+                                        <i class="fas fa-download"></i>
+                                    </button>
                                     @endif
                                     @if ( (($element->has_children == 0) && ($element->element_type_id == 4))
                                           || ($element->element_type_id != 4))
-                                    <button type="button"
-                                            data-id="{{ $element->uuid }}"
-                                            class="text-red-600 hover:text-red-900 delete-button p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                                    <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="parent" value="{{ $uuid ?? '0' }}">
+                                        <button type="submit" 
+                                                class="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out focus:outline-none">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
                                     @endif
                                 </td>
                             </tr>
@@ -198,22 +213,34 @@
                             <div class="text-sm text-gray-600 mb-3">
                                 <span class="font-semibold">Last Modified:</span> {{ $element->updated_at->format('d/m/Y H:i') }}
                             </div>
-                            <div class="flex justify-end space-x-2 action-buttons-card"> {{-- Nueva clase para la celda de botones --}}
-                                @if ($element->element_type_id !== 4) {{-- Los elementos que no son carpetas tienen botón de "View" --}}
+                            <div class="flex justify-end space-x-2 action-buttons-card">
+                                @if($element->is_password || $element->is_text)
                                 <button type="button"
-                                        data-id="{{ $element->uuid }}"
+                                        data-uuid="{{ $element->uuid }}"
+                                        data-key="{{ $element->key }}"
                                         data-type="{{ $element->element_type_id }}"
                                         class="text-blue-600 hover:text-blue-900 view-button px-3 py-1 rounded-md hover:bg-blue-100 transition duration-150 ease-in-out text-sm"
-                                        onclick="event.stopPropagation()"> {{-- Detener propagación --}}
+                                        onclick="event.stopPropagation()">
                                     <i class="fas fa-eye"></i> View
                                 </button>
-                                @endif
+                                @elseif($element->is_file)
                                 <button type="button"
-                                        data-id="{{ $element->uuid }}"
-                                        class="text-red-600 hover:text-red-900 delete-button px-3 py-1 rounded-md hover:bg-red-100 transition duration-150 ease-in-out text-sm"
-                                        onclick="event.stopPropagation()"> {{-- Detener propagación --}}
-                                    <i class="fas fa-trash-alt"></i> Delete
+                                        data-uuid="{{ $element->uuid }}"
+                                        data-key="{{ $element->key }}"
+                                        class="download-button text-green-600 hover:text-green-900 px-3 py-1 rounded-md hover:bg-green-100 transition duration-150 ease-in-out text-sm"
+                                        onclick="event.stopPropagation()">
+                                    <i class="fas fa-download"></i> Download
                                 </button>
+                                @endif
+                                <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');" onclick="event.stopPropagation(); event.stopImmediatePropagation();">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="parent" value="{{ $uuid ?? '0' }}">
+                                    <button type="submit" 
+                                            class="text-red-600 hover:text-red-900 px-3 py-1 rounded-md hover:bg-red-100 transition duration-150 ease-in-out text-sm focus:outline-none">
+                                        <i class="fas fa-trash-alt"></i> Delete
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     @endforeach
@@ -229,21 +256,35 @@
     </div>
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">
             <h1 class="text-3xl font-bold mb-4 text-gray-800">Add New Element</h1>
-            <form id="elementForm" action="{{ route('elements.store') }}" method="POST">
+            <form id="elementForm" action="{{ route('elements.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="mb-4">
                     <label for="element_type_id" class="block text-gray-700 text-sm font-bold mb-2">Type:</label>
                     <select name="element_type_id" id="element_type_id" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
                         <option value="1" selected>Password</option>
                         <option value="2">Text</option>
+                        <option value="3">File</option>
                         <option value="4">Folder</option>
                     </select>
                 </div>
                 <div class="mb-4">
-                    <label for="key" id="keyLabel" class="block text-gray-700 text-sm font-bold mb-2">Element name (key):</label>
-                    <input type="text" name="key" id="key" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                     <label for="key" id="keyLabel" class="block text-gray-700 text-sm font-bold mb-2">Element name (key):</label>
+                     <input type="text" name="key" id="key" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                 </div>
+                
+                <!-- File Upload Field -->
+                <div class="mb-4 hidden" id="fileFormGroup">
+                    <label for="fileInput" class="block text-gray-700 text-sm font-bold mb-2">Select File:</label>
+                    <div class="flex items-center">
+                        <label class="flex flex-col items-center px-4 py-2 bg-white text-blue-500 rounded-lg border border-blue-500 cursor-pointer hover:bg-blue-50">
+                            <span class="text-sm">Choose File</span>
+                            <input type="file" id="fileInput" name="file" class="hidden">
+                        </label>
+                        <span id="fileNameDisplay" class="ml-3 text-sm text-gray-600">No file selected</span>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Files are encrypted client-side before upload</p>
                 </div>
-                <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
+                 <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
                     <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold mb-2">Content:</label>
                     <input type="text" id="passwordPlain" name="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
                     <textarea id="passwordPlainTextarea" name="passwordPlainTextarea" class="shadow border rounded w-full py-2 px-3 text-gray-700 hidden" rows="5"></textarea>
@@ -348,7 +389,7 @@
                 
                 <div id="countdown" class="mt-2 text-sm text-gray-500"></div>
 
-                <button onclick="closeModal()" class="mt-4 text-sm text-red-500 hover:underline">Close</button>
+                <button type="button" class="close-button mt-4 text-sm text-red-500 hover:underline">Close</button>
             </div>
         </div>
 
@@ -358,423 +399,17 @@
 
 @section('scripts_extra')
     {{-- Font Awesome for Icons --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" 
+          integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w==" 
+          crossorigin="anonymous" 
+          referrerpolicy="no-referrer" />
 
-
+    {{-- Main JavaScript file for the elements page --}}
     <script type="module">
-        // Import functions from the utility file
-        import { encryptData, decryptData, validateBase64, secureWipe, secureWipeMultiple, SecureString } from '{{ asset('js/encryptionUtils.js') }}';
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const deleteButtons = document.querySelectorAll('.delete-button');
-            const modal = document.getElementById('deleteConfirmationModal');
-            const cancelDeleteButton = document.getElementById('cancelDelete');
-            const deleteForm = document.getElementById('deleteForm');
-
-            deleteButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    const elementId = this.dataset.id;
-                    deleteForm.action = `/myaccount/elements/${elementId}`;
-                    modal.classList.remove('hidden');
-                });
-            });
-
-            cancelDeleteButton.addEventListener('click', function () {
-                modal.classList.add('hidden');
-            });
-
-            modal.addEventListener('click', function (event) {
-                if (event.target === modal) {
-                    modal.classList.add('hidden');
-                }
-            });
-        });
-
-        // --- Add Password (Encryption) Logic ---
-        const form = document.getElementById("elementForm");
-        const encryptionModal = document.getElementById("modal");
-        const masterKeyInput = document.getElementById("masterKey");
-
-        form.addEventListener("submit", (e) => {
-            // Send the form if its a folder
-            if (document.getElementById("element_type_id").value === "4") {
-                form.submit();
-                return;
-            }
-            // Prevent default form submission
-            e.preventDefault();
-            encryptionModal.classList.remove("hidden");
-            masterKeyInput.focus();
-        });
-
-        document.getElementById("cancelModal").addEventListener("click", () => {
-            // *** IMPLEMENTACIÓN SEGURA ***
-            secureWipe(masterKeyInput);
-            encryptionModal.classList.add("hidden");
-        });
-
-        document.getElementById("confirmEncryption").addEventListener("click", async () => {
-            const elementType = document.getElementById("element_type_id").value;
-            let plaintext;
-            let plaintextElement;
-            
-            switch (elementType) {
-                case "1":
-                    plaintext = document.getElementById("passwordPlain").value;
-                    plaintextElement = document.getElementById("passwordPlain");
-                    break;
-                case "2":
-                    plaintext = document.getElementById("passwordPlainTextarea").value;
-                    plaintextElement = document.getElementById("passwordPlainTextarea");
-                    break;
-            }
-            
-            const passphrase = masterKeyInput.value;
-
-            if (!passphrase || !plaintext) {
-                alert("Both fields are required.");
-                return;
-            }
-
-            try {
-                const { encryptedData, iv, salt, hmac } = await encryptData(plaintext, passphrase, {{ $iterations }});
-
-                document.getElementById("passwordEncrypted").value = encryptedData;
-                document.querySelector("input[name='iv']").value = iv;
-                document.querySelector("input[name='salt']").value = salt;
-                document.querySelector("input[name='hmac']").value = hmac;
-                document.querySelector("input[name='iterations']").value = {{ $iterations }};
-
-                // *** IMPLEMENTACIÓN SEGURA - LIMPIEZA COMPLETA ***
-                secureWipeMultiple(
-                    plaintextElement,
-                    masterKeyInput
-                );
-                
-                encryptionModal.classList.add("hidden");
-                form.submit();
-                
-            } catch (error) {
-                console.error("Encryption error:", error);
-                alert("Error encrypting password. Please try again.");
-                
-                // *** LIMPIAR EN CASO DE ERROR ***
-                secureWipeMultiple(plaintextElement, masterKeyInput);
-            }
-        });
-
-        // --- Show Password (Decryption) Logic ---
-        const viewButtons = document.querySelectorAll('.view-button');
-        const viewModal = document.getElementById('viewModal');
-        const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
-        const decryptBtn = document.getElementById('decryptBtn');
-        const decryptedPasswordInput = document.getElementById('decryptedPasswordInput');        
-        const decryptedPasswordTextarea = document.getElementById('decryptedPasswordTextarea');
-        const copyPasswordBtn = document.getElementById('copyPasswordBtn');      
-        const copyPasswordTextareaBtn = document.getElementById('copyPasswordTextareaBtn');
-        const countdownDisplay = document.getElementById('countdown'); 
-
-        let currentPasswordData = {};
-        let countdownTimer;
-        let secureDecryptedData = null; // *** VARIABLE PARA DATOS SEGUROS ***
-
-        // *** FUNCIÓN DE LIMPIEZA MEJORADA ***
-        window.closeModal = function() {
-            viewModal.classList.add('hidden');
-            
-            // Limpiar todos los elementos sensibles de forma segura
-            secureWipeMultiple(
-                viewMasterKeyInput,
-                decryptedPasswordInput,
-                decryptedPasswordTextarea
-            );
-            
-            // Limpiar datos seguros
-            if (secureDecryptedData) {
-                secureDecryptedData.destroy();
-                secureDecryptedData = null;
-            }
-            
-            currentPasswordData = {};
-            clearInterval(countdownTimer);
-            countdownDisplay.textContent = '';
-            copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
-            copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
-        }
+        // Set the PHP variable in the global scope for the JavaScript module
+        window.encryptionIterations = {{ $iterations }};
         
-        // Close modal when clicking outside of it
-        viewModal.addEventListener('click', function(event) {
-            if (event.target === viewModal) {
-                closeModal();
-            }
-        });
-
-        // *** EVENTO PARA LIMPIAR CUANDO SE PIERDE EL FOCO ***
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden && !viewModal.classList.contains('hidden')) {
-                closeModal();
-            }
-        });
-
-        // *** EVENTO PARA LIMPIAR AL CAMBIAR DE VENTANA ***
-        window.addEventListener('blur', function() {
-            if (!viewModal.classList.contains('hidden')) {
-                closeModal();
-            }
-        });
-
-        viewButtons.forEach(button => {
-            button.addEventListener('click', async () => {
-                const elementId = button.dataset.id;
-                const elementType = button.dataset.type;
-                viewModal.classList.remove('hidden');
-                
-                // *** LIMPIAR ESTADO ANTERIOR ***
-                if (secureDecryptedData) {
-                    secureDecryptedData.destroy();
-                    secureDecryptedData = null;
-                }
-                
-                clearInterval(countdownTimer); 
-                countdownDisplay.textContent = '';
-                secureWipeMultiple(
-                    decryptedPasswordInput,
-                    decryptedPasswordTextarea,
-                    viewMasterKeyInput
-                );
-
-                // Check if the element is a text type
-                if (elementType === '2') {
-                    decryptedPasswordTextarea.classList.remove('hidden');
-                    decryptedPasswordInput.classList.add('hidden');
-                    decryptedPasswordTextareaWrapper.classList.remove('hidden');
-                    decryptedPasswordInputWrapper.classList.add('hidden');
-                } else {
-                    decryptedPasswordTextarea.classList.add('hidden');
-                    decryptedPasswordInput.classList.remove('hidden');
-                    decryptedPasswordTextareaWrapper.classList.add('hidden');
-                    decryptedPasswordInputWrapper.classList.remove('hidden');
-                }
-
-                try {
-                    const response = await fetch(`/myaccount/elements/get/${elementId}`);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const data = await response.json();
-
-                    currentPasswordData = {
-                        content: data.content,
-                        iv: data.iv,
-                        salt: data.salt,
-                        hmac: data.hmac,
-                        iterations: data.iterations
-                    };
-
-                    if (!validateBase64(currentPasswordData.content) || !validateBase64(currentPasswordData.iv) || !validateBase64(currentPasswordData.salt)) {
-                        throw new Error("Invalid base64 data received.");
-                    }
-
-                } catch (error) {
-                    console.error('Error fetching password data:', error);
-                    decryptedPasswordInput.value = "❌ Error loading password data.";
-                    decryptedPasswordTextarea.value = "❌ Error loading password data.";
-                }
-            });
-        });
-
-        decryptBtn.addEventListener('click', async () => {
-            const masterKey = viewMasterKeyInput.value;
-
-            if (!masterKey) {
-                decryptedPasswordInput.value = "Please enter the master key.";
-                decryptedPasswordTextarea.value = "Please enter the master key.";
-                return;
-            }
-
-            const { content, iv, salt, hmac, iterations } = currentPasswordData;
-
-            if (!content || !iv || !salt || !hmac) {
-                decryptedPasswordInput.value = "❌ Password data not available. Try again.";
-                decryptedPasswordTextarea.value = "❌ Password data not available. Try again.";
-                return;
-            }
-
-            try {
-                const decrypted = await decryptData(content, masterKey, iv, salt, hmac, iterations);
-                
-                // *** CREAR CONTENEDOR SEGURO PARA DATOS DESCIFRADOS ***
-                secureDecryptedData = new SecureString(decrypted, 30000); // 30 segundos máximo
-                
-                decryptedPasswordInput.value = secureDecryptedData.getValue();
-                decryptedPasswordTextarea.value = secureDecryptedData.getValue();
-                
-                // *** LIMPIAR MASTER KEY INMEDIATAMENTE ***
-                secureWipe(viewMasterKeyInput);
-
-                clearInterval(countdownTimer); 
-                let timeLeft = 30; // *** REDUCIDO A 30 SEGUNDOS ***
-                countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
-                
-
-                countdownTimer = setInterval(() => {
-                    timeLeft--;
-                    countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
-                    if (timeLeft <= 0) {
-                        closeModal();
-                    }
-                }, 1000);
-                
-            } catch (e) {
-                console.error("Error during decryption:", e);
-                decryptedPasswordInput.value = "❌ Decryption failed: " + e.message;
-                decryptedPasswordTextarea.value = "❌ Decryption failed: " + e.message;
-                
-                // *** LIMPIAR EN CASO DE ERROR ***
-                secureWipe(viewMasterKeyInput);
-                clearInterval(countdownTimer); 
-                countdownDisplay.textContent = '';
-            }
-        });
-
-        copyPasswordBtn.addEventListener('click', async () => {
-            try {
-                let textToCopy = '';
-                if (secureDecryptedData && !secureDecryptedData._destroyed) {
-                    textToCopy = secureDecryptedData.getValue();
-                } else {
-                    textToCopy = decryptedPasswordInput.value;
-                }
-                
-                await navigator.clipboard.writeText(textToCopy);
-                copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                setTimeout(() => {
-                    copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
-                }, 2000);
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                alert('Failed to copy password. Please try again or copy manually.');
-            }
-        });
-
-        copyPasswordTextareaBtn.addEventListener('click', async () => {
-            try {
-                let textToCopy = '';
-                if (secureDecryptedData && !secureDecryptedData._destroyed) {
-                    textToCopy = secureDecryptedData.getValue();
-                } else {
-                    textToCopy = decryptedPasswordTextarea.value;
-                }
-                
-                await navigator.clipboard.writeText(textToCopy);
-                copyPasswordTextareaBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                setTimeout(() => {
-                    copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
-                }, 2000);
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                alert('Failed to copy password. Please try again or copy manually.');
-            }
-        });
+        // Import the main JavaScript file
+        import '{{ asset('js/elements.js') }}';
     </script>
-
-
-
-
-
-    <script>
-        // --- Update form fields depending on the type of element ---
-        document.addEventListener('DOMContentLoaded', function() {
-            const elementTypeSelect = document.getElementById('element_type_id');
-            const keyLabel = document.getElementById('keyLabel');
-            const contentFieldWrapper = document.getElementById('contentFieldWrapper');
-            const passwordPlainInput = document.getElementById('passwordPlain');
-            const passwordPlainTextarea = document.getElementById('passwordPlainTextarea');
-
-            function updateFormFields() {
-                const selectedValue = elementTypeSelect.value;
-
-                // Type 1: Password
-                if (selectedValue === '1') {
-                    keyLabel.textContent = 'Element name (key):';
-                    contentFieldWrapper.classList.remove('hidden'); // Show content field
-                    passwordPlainInput.setAttribute('required', 'required'); // Make it required
-                    passwordPlainInput.classList.remove('hidden'); // Show the textarea
-                    passwordPlainTextarea.removeAttribute('required');
-                    passwordPlainTextarea.classList.add('hidden'); // Hide the textarea
-                }
-                // Type 2: Text
-                else if (selectedValue === '2') {
-                    keyLabel.textContent = 'Element name (key):';
-                    contentFieldWrapper.classList.remove('hidden'); // Show content field
-                    passwordPlainInput.removeAttribute('required');
-                    passwordPlainInput.classList.add('hidden'); // Hide the textarea
-                    passwordPlainTextarea.setAttribute('required', 'required');
-                    passwordPlainTextarea.classList.remove('hidden'); // Show the textarea
-                }
-                // Type 4: Folder
-                else if (selectedValue === '4') {
-                    keyLabel.textContent = 'Folder name:'; // Change the label text
-                    contentFieldWrapper.classList.add('hidden'); // Hide the content field
-                    passwordPlainInput.removeAttribute('required'); // Not required
-                    passwordPlainTextarea.removeAttribute('required');
-                    passwordPlainTextarea.classList.add('hidden'); // Hide the textarea
-                }
-            }
-
-            // Execute the function when the page loads to set the initial state
-            updateFormFields();
-
-            // Listen for changes in the type selector
-            elementTypeSelect.addEventListener('change', updateFormFields);
-
-        
-            // ********** Navigate through folders **********
-            // Select all rows that have the data-href attribute
-            const rows = document.querySelectorAll('tbody tr[data-href]');
-
-            rows.forEach(row => {
-                row.addEventListener('click', function(event) {
-                    // Check if the click came from an action button
-                    // event.target is the element that was clicked
-                    // event.currentTarget is the element that the event listener was attached to (the row in this case)
-                    if (event.target.closest('.action-buttons-cell')) {
-                        // If the click was inside the action cell, do nothing
-                        return;
-                    }
-
-                    // If it wasn't in the action cell, navigate to the URL
-                    const url = this.dataset.href;
-                    if (url) {
-                        window.location.href = url;
-                    }
-                });
-            });
-
-
-            const folderCards = document.querySelectorAll('.folder-card[data-href]');
-
-            folderCards.forEach(card => {
-                card.addEventListener('click', function(event) {
-                    // Verificamos si el clic provino de un botón de acción dentro de la tarjeta
-                    if (event.target.closest('.action-buttons-card')) {
-                        return; // Si sí, no hacemos nada y dejamos que el botón maneje su propio evento
-                    }
-
-                    // Si no fue en los botones, navegamos a la URL de la carpeta
-                    const url = this.dataset.href;
-                    if (url) {
-                        window.location.href = url;
-                    }
-                });
-            });
-
-
-        });
-
-
-
-
-    </script>
-
 @endsection

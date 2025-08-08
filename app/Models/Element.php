@@ -28,7 +28,35 @@ class Element extends Model
         'iv',
         'salt',
         'hmac',
+        'file_path',
+        'file_name',
+        'file_size',
+        'file_mime',
+        'element_type_id',
+        'parent',
+        'iterations',
     ];
+
+    protected $appends = ['is_file', 'file_url'];
+
+    /**
+     * Get the URL to access the encrypted file
+     */
+    public function getFileUrlAttribute()
+    {
+        if ($this->element_type_id === 3 && $this->file_path) {
+            return route('element.file.download', $this->uuid);
+        }
+        return null;
+    }
+
+    /**
+     * Check if the element is a file
+     */
+    public function getIsFileAttribute()
+    {
+        return $this->element_type_id === 3;
+    }
 
     /**
      * Get the user that owns the password.
