@@ -1,398 +1,333 @@
 // Import functions from the utility file
 import { encryptData, decryptData, validateBase64, secureWipe, secureWipeMultiple, SecureString } from './encryptionUtils.js';
+import { encryptFile, decryptFile, downloadDecryptedFile } from './fileEncryption.js';
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Delete Confirmation Modal
-    const deleteButtons = document.querySelectorAll('.delete-button');
-    const modal = document.getElementById('deleteConfirmationModal');
+    // --- General Setup ---
+    const fileInput = document.getElementById("fileInput");
+    const fileNameDisplay = document.getElementById("fileNameDisplay");
+    const elementForm = document.getElementById("elementForm");
+    const elementTypeSelect = document.getElementById('element_type_id');
+
+    // --- Delete Confirmation Modal ---
+    const deleteConfirmationModal = document.getElementById('deleteConfirmationModal');
     const cancelDeleteButton = document.getElementById('cancelDelete');
     const deleteForm = document.getElementById('deleteForm');
 
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const elementId = this.dataset.id;
-            deleteForm.action = `/myaccount/elements/${elementId}`;
-            modal.classList.remove('hidden');
+    document.querySelectorAll('.delete-button').forEach(button => {
+        button.addEventListener('click', function (event) {
+            event.stopPropagation();
+            deleteForm.action = `/myaccount/elements/${this.dataset.id}`;
+            deleteConfirmationModal.classList.remove('hidden');
         });
     });
 
-    cancelDeleteButton?.addEventListener('click', function () {
-        modal?.classList.add('hidden');
+    cancelDeleteButton?.addEventListener('click', () => deleteConfirmationModal?.classList.add('hidden'));
+    deleteConfirmationModal?.addEventListener('click', (event) => { 
+        if (event.target === deleteConfirmationModal) deleteConfirmationModal.classList.add('hidden'); 
     });
 
-    modal?.addEventListener('click', function (event) {
-        if (event.target === modal) {
-            modal.classList.add('hidden');
-        }
-    });
-
-    // --- Add Password (Encryption) Logic ---
-    const form = document.getElementById("elementForm");
+    // --- Create/Encrypt Modal ---
     const encryptionModal = document.getElementById("modal");
     const masterKeyInput = document.getElementById("masterKey");
+    const cancelModalButton = document.getElementById("cancelModal");
+    const confirmEncryptionButton = document.getElementById("confirmEncryption");
 
-    form?.addEventListener("submit", async (e) => {
-        // Send the form if it's a folder
-        if (document.getElementById("element_type_id")?.value === "4") {
-            return;
-        }
-        
+    elementForm?.addEventListener("submit", function (e) {
+        const elementType = elementTypeSelect?.value;
+        if (elementType === "4") return; // Allow normal submission for folders
         e.preventDefault();
+        if (elementType === "3" && (!fileInput || fileInput.files.length === 0)) {
+            return alert("Please select a file to upload");
+        }
         encryptionModal?.classList.remove("hidden");
         masterKeyInput?.focus();
     });
 
-    document.getElementById("cancelModal")?.addEventListener("click", () => {
+    cancelModalButton?.addEventListener("click", () => {
         secureWipe(masterKeyInput);
         encryptionModal?.classList.add("hidden");
     });
 
-    document.getElementById("confirmEncryption")?.addEventListener("click", async () => {
-        const elementType = document.getElementById("element_type_id")?.value;
-        let plaintext = '';
-        let plaintextElement;
-        
-        switch (elementType) {
-            case "1":
-                plaintextElement = document.getElementById("passwordPlain");
-                plaintext = plaintextElement?.value || '';
-                break;
-            case "2":
-                plaintextElement = document.getElementById("passwordPlainTextarea");
-                plaintext = plaintextElement?.value || '';
-                break;
-        }
-        
-        const passphrase = masterKeyInput?.value || '';
+    confirmEncryptionButton?.addEventListener("click", async () => {
+        const masterKey = masterKeyInput?.value || '';
+        if (!masterKey) return alert('Please enter your master key');
 
-        if (!passphrase || !plaintext) {
-            alert("Both fields are required.");
-            return;
-        }
+        const originalBtnText = confirmEncryptionButton.innerHTML;
+        confirmEncryptionButton.disabled = true;
+        confirmEncryptionButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
         try {
-            const { encryptedData, iv, salt, hmac } = await encryptData(plaintext, passphrase, window.encryptionIterations || 100000);
+            const elementType = elementTypeSelect?.value;
+            const iterations = window.encryptionIterations || 100000;
 
-            document.getElementById("passwordEncrypted").value = encryptedData;
-            document.querySelector("input[name='iv']").value = iv;
-            document.querySelector("input[name='salt']").value = salt;
-            document.querySelector("input[name='hmac']").value = hmac;
-            document.querySelector("input[name='iterations']").value = window.encryptionIterations || 100000;
+            if (elementType === '3') { // File
+                const file = fileInput?.files[0];
+                if (!file) throw new Error('Please select a file to upload');
 
-            secureWipeMultiple(plaintextElement, masterKeyInput);
-            encryptionModal?.classList.add("hidden");
-            form.submit();
-            
+                const { encryptedFile, iv, salt, hmac } = await encryptFile(file, masterKey, iterations);
+                const formData = new FormData(elementForm);
+                formData.set('file', encryptedFile, file.name);
+                formData.set('file_iv', iv);
+                formData.set('file_salt', salt);
+                formData.set('file_hmac', hmac);
+                formData.set('iterations', iterations);
+
+                const response = await fetch(elementForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else if (response.ok) {
+                    const result = await response.json();
+                    window.location.href = result.redirect || '/myaccount/elements';
+                } else {
+                    const errorResult = await response.json();
+                    throw new Error(errorResult.message || 'Failed to upload file');
+                }
+
+            } else { // Password or Text
+                const plaintextElement = elementType === '1' ? document.getElementById('passwordPlain') : document.getElementById('passwordPlainTextarea');
+                const plaintext = plaintextElement?.value || '';
+                if (!plaintext) throw new Error('Please enter content to encrypt');
+
+                const { encryptedData, iv, salt, hmac } = await encryptData(plaintext, masterKey, iterations);
+                document.getElementById("passwordEncrypted").value = encryptedData;
+                document.querySelector("input[name='iv']").value = iv;
+                document.querySelector("input[name='salt']").value = salt;
+                document.querySelector("input[name='hmac']").value = hmac;
+                document.querySelector("input[name='iterations']").value = iterations;
+
+                secureWipe(plaintextElement);
+                elementForm.submit();
+            }
         } catch (error) {
-            console.error("Encryption error:", error);
-            alert("Error encrypting password. Please try again.");
-            secureWipeMultiple(plaintextElement, masterKeyInput);
+            console.error("Process error:", error);
+            alert(error.message || "An error occurred. Please try again.");
+        } finally {
+            confirmEncryptionButton.disabled = false;
+            confirmEncryptionButton.innerHTML = originalBtnText;
         }
     });
 
-    // --- Show Password (Decryption) Logic ---
-    const viewButtons = document.querySelectorAll('.view-button');
+    // --- View/Download/Decrypt Modal ---
     const viewModal = document.getElementById('viewModal');
+    const viewModalTitle = document.getElementById('viewModalTitle');
     const viewMasterKeyInput = document.getElementById('viewMasterKeyInput');
     const decryptBtn = document.getElementById('decryptBtn');
-    const decryptedPasswordInput = document.getElementById('decryptedPasswordInput');        
+    const decryptedPasswordInput = document.getElementById('decryptedPasswordInput');
     const decryptedPasswordTextarea = document.getElementById('decryptedPasswordTextarea');
-    const copyPasswordBtn = document.getElementById('copyPasswordBtn');      
+    const copyPasswordBtn = document.getElementById('copyPasswordBtn');
     const copyPasswordTextareaBtn = document.getElementById('copyPasswordTextareaBtn');
-    const countdownDisplay = document.getElementById('countdown');
-    const decryptedPasswordTextareaWrapper = document.getElementById('decryptedPasswordTextareaWrapper');
     const decryptedPasswordInputWrapper = document.getElementById('decryptedPasswordInputWrapper');
-
-    let currentPasswordData = {};
+    const decryptedPasswordTextareaWrapper = document.getElementById('decryptedPasswordTextareaWrapper');
+    const countdownDisplay = document.getElementById('countdownDisplay');
+    
+    let currentElementData = {};
     let countdownTimer;
     let secureDecryptedData = null;
 
-    // Improved cleaning function
-    window.closeModal = function() {
-        viewModal?.classList.add('hidden');
-        
-        secureWipeMultiple(
-            viewMasterKeyInput,
-            decryptedPasswordInput,
-            decryptedPasswordTextarea
-        );
-        
-        if (secureDecryptedData) {
-            secureDecryptedData.destroy();
-            secureDecryptedData = null;
-        }
-        
-        currentPasswordData = {};
+    const closeModal = () => {
+        if (viewModal) viewModal.classList.add('hidden');
+        if (secureDecryptedData) secureDecryptedData.destroy();
+        secureDecryptedData = null;
         clearInterval(countdownTimer);
-        if (countdownDisplay) countdownDisplay.textContent = '';
-        if (copyPasswordBtn) copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
-        if (copyPasswordTextareaBtn) copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
+        secureWipeMultiple(decryptedPasswordInput, decryptedPasswordTextarea, viewMasterKeyInput);
     };
-    
-    // Close modal when clicking outside of it
-    viewModal?.addEventListener('click', function(event) {
-        if (event.target === viewModal) {
-            closeModal();
+
+    viewModal?.addEventListener('click', (event) => { if (event.target === viewModal) closeModal(); });
+    viewModal?.querySelector('.close-button')?.addEventListener('click', () => closeModal());
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !viewModal.classList.contains('hidden')) closeModal(); });
+
+    const startCountdown = (duration) => {
+        let timeLeft = duration;
+        if (countdownDisplay) {
+            countdownDisplay.textContent = `Closing in ${timeLeft}s`;
+            countdownDisplay.classList.remove('hidden');
         }
+        clearInterval(countdownTimer);
+        countdownTimer = setInterval(() => {
+            timeLeft--;
+            if (countdownDisplay) countdownDisplay.textContent = `Closing in ${timeLeft}s`;
+            if (timeLeft <= 0) closeModal();
+        }, 1000);
+    };
+
+    const setupActionModal = (button, action) => {
+        currentElementData = { uuid: button.dataset.uuid, type: button.dataset.type, key: button.dataset.key };
+        const isDownload = action === 'download';
+        if (viewModalTitle) viewModalTitle.textContent = isDownload ? `Decrypt & Download: ${currentElementData.key}` : `View: ${currentElementData.key}`;
+        if (decryptBtn) decryptBtn.textContent = isDownload ? 'Decrypt & Download' : 'Decrypt';
+        if (decryptedPasswordInputWrapper) decryptedPasswordInputWrapper.classList.add('hidden');
+        if (decryptedPasswordTextareaWrapper) decryptedPasswordTextareaWrapper.classList.add('hidden');
+        if (viewMasterKeyInput) {
+            viewMasterKeyInput.value = '';
+            viewMasterKeyInput.classList.remove('hidden');
+        }
+        if (decryptBtn) decryptBtn.classList.remove('hidden');
+        if (countdownDisplay) countdownDisplay.classList.add('hidden');
+        if (viewModal) {
+            viewModal.dataset.action = action;
+            viewModal.classList.remove('hidden');
+            viewMasterKeyInput.focus();
+        }
+    };
+
+    document.querySelectorAll('.view-button').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            setupActionModal(button, 'view');
+        });
     });
 
-    // Clean when page is hidden
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden && viewModal && !viewModal.classList.contains('hidden')) {
-            closeModal();
-        }
+    document.querySelectorAll('.download-button').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            setupActionModal(button, 'download');
+        });
     });
 
-    // Clean when window loses focus
-    window.addEventListener('blur', function() {
-        if (viewModal && !viewModal.classList.contains('hidden')) {
-            closeModal();
-        }
-    });
+    decryptBtn?.addEventListener('click', async () => {
+        const masterKey = viewMasterKeyInput?.value || '';
+        if (!masterKey) return alert('Please enter your master key.');
 
-    viewButtons.forEach(button => {
-        button.addEventListener('click', async () => {
-            const elementId = button.dataset.id;
-            const elementType = button.dataset.type;
-            viewModal?.classList.remove('hidden');
-            
-            if (secureDecryptedData) {
-                secureDecryptedData.destroy();
-                secureDecryptedData = null;
-            }
-            
-            clearInterval(countdownTimer); 
-            if (countdownDisplay) countdownDisplay.textContent = '';
-            secureWipeMultiple(
-                decryptedPasswordInput,
-                decryptedPasswordTextarea,
-                viewMasterKeyInput
-            );
+        const action = viewModal.dataset.action;
+        const originalBtnText = decryptBtn.innerHTML;
+        decryptBtn.disabled = true;
+        decryptBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-            // Check if the element is a text type
-            if (elementType === '2') {
-                decryptedPasswordTextarea?.classList.remove('hidden');
-                decryptedPasswordInput?.classList.add('hidden');
-                decryptedPasswordTextareaWrapper?.classList.remove('hidden');
-                decryptedPasswordInputWrapper?.classList.add('hidden');
-            } else {
-                decryptedPasswordTextarea?.classList.add('hidden');
-                decryptedPasswordInput?.classList.remove('hidden');
-                decryptedPasswordTextareaWrapper?.classList.add('hidden');
-                decryptedPasswordInputWrapper?.classList.remove('hidden');
-            }
+        try {
+            if (action === 'download') {
+                const response = await fetch(`/myaccount/elements/download/${currentElementData.uuid}`);
+                if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
 
-            try {
-                const response = await fetch(`/myaccount/elements/get/${elementId}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                const iv = response.headers.get('X-File-IV');
+                const salt = response.headers.get('X-File-Salt');
+                const hmac = response.headers.get('X-File-Hmac');
+                const iterations = parseInt(response.headers.get('X-File-Iterations'), 10);
+                const contentDisposition = response.headers.get('Content-Disposition');
+                const fileName = contentDisposition?.match(/filename="?(.+)"?/i)?.[1] || 'decrypted-file';
+                const fileType = response.headers.get('Content-Type');
+
+                if (!iv || !salt || !hmac || !iterations) throw new Error('Encryption metadata missing.');
+
+                const encryptedData = await response.arrayBuffer();
+                const decryptedData = await decryptFile(encryptedData, masterKey, iv, salt, hmac, iterations);
+                downloadDecryptedFile(decryptedData, fileName, fileType);
+                closeModal();
+
+            } else { // 'view' action
+                const response = await fetch(`/myaccount/elements/get/${currentElementData.uuid}`);
+                if (!response.ok) throw new Error(`Fetch failed: ${response.statusText}`);
                 const data = await response.json();
 
-                currentPasswordData = {
-                    content: data.content,
-                    iv: data.iv,
-                    salt: data.salt,
-                    hmac: data.hmac,
-                    iterations: data.iterations
-                };
-
-                if (!validateBase64(currentPasswordData.content) || !validateBase64(currentPasswordData.iv) || !validateBase64(currentPasswordData.salt)) {
-                    throw new Error("Invalid base64 data received.");
+                if (!validateBase64(data.password) || !validateBase64(data.iv) || !validateBase64(data.salt) || !validateBase64(data.hmac)) {
+                    throw new Error('Invalid encrypted data received.');
                 }
 
-            } catch (error) {
-                console.error('Error fetching password data:', error);
-                if (decryptedPasswordInput) decryptedPasswordInput.value = "❌ Error loading password data.";
-                if (decryptedPasswordTextarea) decryptedPasswordTextarea.value = "❌ Error loading password data.";
+                const decrypted = await decryptData(data.password, masterKey, data.iv, data.salt, data.hmac, data.iterations);
+                secureDecryptedData = new SecureString(decrypted);
+
+                if (currentElementData.type == '1') { // Password
+                    decryptedPasswordInput.value = decrypted;
+                    decryptedPasswordInputWrapper.classList.remove('hidden');
+                } else if (currentElementData.type == '2') { // Text
+                    decryptedPasswordTextarea.value = decrypted;
+                    decryptedPasswordTextareaWrapper.classList.remove('hidden');
+                }
+
+                viewMasterKeyInput.classList.add('hidden');
+                decryptBtn.classList.add('hidden');
+                startCountdown(30);
             }
+        } catch (error) {
+            console.error('Process error:', error);
+            alert(error.message || 'An error occurred.');
+            closeModal();
+        } finally {
+            decryptBtn.disabled = false;
+            decryptBtn.innerHTML = originalBtnText;
+        }
+    });
+
+    const copyToClipboard = async (textProvider, button) => {
+        try {
+            let textToCopy = textProvider();
+            if (textToCopy) {
+                await navigator.clipboard.writeText(textToCopy);
+                const originalHtml = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => { button.innerHTML = originalHtml; }, 2000);
+            }
+        } catch (err) {
+            console.error('Failed to copy text:', err);
+            alert('Failed to copy text.');
+        }
+    };
+
+    copyPasswordBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordInput.value, copyPasswordBtn));
+    copyPasswordTextareaBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordTextarea.value, copyPasswordTextareaBtn));
+
+    // --- Folder Navigation ---
+    document.querySelectorAll('tbody tr[data-href], .folder-card[data-href]').forEach(item => {
+        item.addEventListener('click', function (event) {
+            if (event.target.closest('.action-buttons-cell, .action-buttons-card')) return;
+            const url = this.dataset.href;
+            if (url) window.location.href = url;
         });
     });
 
-    if (decryptBtn) {
-        decryptBtn.addEventListener('click', async () => {
-            const masterKey = viewMasterKeyInput?.value || '';
-
-            if (!masterKey) {
-                if (decryptedPasswordInput) decryptedPasswordInput.value = "Please enter the master key.";
-                if (decryptedPasswordTextarea) decryptedPasswordTextarea.value = "Please enter the master key.";
-                return;
-            }
-
-            const { content, iv, salt, hmac, iterations } = currentPasswordData;
-
-            if (!content || !iv || !salt || !hmac) {
-                if (decryptedPasswordInput) decryptedPasswordInput.value = "❌ Password data not available. Try again.";
-                if (decryptedPasswordTextarea) decryptedPasswordTextarea.value = "❌ Password data not available. Try again.";
-                return;
-            }
-
-            try {
-                const decrypted = await decryptData(content, masterKey, iv, salt, hmac, iterations);
-                
-                secureDecryptedData = new SecureString(decrypted, 30000); // 30 seconds maximum
-                
-                if (decryptedPasswordInput) decryptedPasswordInput.value = secureDecryptedData.getValue();
-                if (decryptedPasswordTextarea) decryptedPasswordTextarea.value = secureDecryptedData.getValue();
-                
-                secureWipe(viewMasterKeyInput);
-
-                clearInterval(countdownTimer); 
-                let timeLeft = 30;
-                if (countdownDisplay) countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
-                
-                countdownTimer = setInterval(() => {
-                    timeLeft--;
-                    if (countdownDisplay) countdownDisplay.textContent = `This will close in ${timeLeft} seconds.`;
-                    if (timeLeft <= 0) {
-                        closeModal();
-                    }
-                }, 1000);
-                
-            } catch (e) {
-                console.error("Error during decryption:", e);
-                if (decryptedPasswordInput) decryptedPasswordInput.value = "❌ Decryption failed: " + e.message;
-                if (decryptedPasswordTextarea) decryptedPasswordTextarea.value = "❌ Decryption failed: " + e.message;
-                
-                secureWipe(viewMasterKeyInput);
-                clearInterval(countdownTimer); 
-                if (countdownDisplay) countdownDisplay.textContent = '';
-            }
-        });
-    }
-
-    // Copy to clipboard functionality
-    if (copyPasswordBtn) {
-        copyPasswordBtn.addEventListener('click', async () => {
-            try {
-                let textToCopy = '';
-                if (secureDecryptedData && !secureDecryptedData._destroyed) {
-                    textToCopy = secureDecryptedData.getValue();
-                } else if (decryptedPasswordInput) {
-                    textToCopy = decryptedPasswordInput.value;
-                }
-                
-                if (textToCopy) {
-                    await navigator.clipboard.writeText(textToCopy);
-                    copyPasswordBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                    setTimeout(() => {
-                        copyPasswordBtn.innerHTML = '<i class="far fa-copy"></i>';
-                    }, 2000);
-                }
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                alert('Failed to copy password. Please try again or copy manually.');
-            }
-        });
-    }
-
-    if (copyPasswordTextareaBtn) {
-        copyPasswordTextareaBtn.addEventListener('click', async () => {
-            try {
-                let textToCopy = '';
-                if (secureDecryptedData && !secureDecryptedData._destroyed) {
-                    textToCopy = secureDecryptedData.getValue();
-                } else if (decryptedPasswordTextarea) {
-                    textToCopy = decryptedPasswordTextarea.value;
-                }
-                
-                if (textToCopy) {
-                    await navigator.clipboard.writeText(textToCopy);
-                    copyPasswordTextareaBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                    setTimeout(() => {
-                        copyPasswordTextareaBtn.innerHTML = '<i class="far fa-copy"></i>';
-                    }, 2000);
-                }
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                alert('Failed to copy password. Please try again or copy manually.');
-            }
-        });
-    }
-
-    // --- Update form fields depending on the type of element ---
-    const elementTypeSelect = document.getElementById('element_type_id');
+    // --- Dynamic Form Fields ---
     const keyLabel = document.getElementById('keyLabel');
     const contentFieldWrapper = document.getElementById('contentFieldWrapper');
     const passwordPlainInput = document.getElementById('passwordPlain');
     const passwordPlainTextarea = document.getElementById('passwordPlainTextarea');
+    const fileFormGroup = document.getElementById('fileFormGroup');
 
-    function updateFormFields() {
+    const updateFormFields = () => {
         if (!elementTypeSelect) return;
-        
         const selectedValue = elementTypeSelect.value;
 
-        // Type 1: Password
-        if (selectedValue === '1') {
-            if (keyLabel) keyLabel.textContent = 'Element name (key):';
-            if (contentFieldWrapper) contentFieldWrapper.classList.remove('hidden');
-            if (passwordPlainInput) {
-                passwordPlainInput.setAttribute('required', 'required');
-                passwordPlainInput.classList.remove('hidden');
-            }
-            if (passwordPlainTextarea) {
-                passwordPlainTextarea.removeAttribute('required');
-                passwordPlainTextarea.classList.add('hidden');
-            }
-        }
-        // Type 2: Text
-        else if (selectedValue === '2') {
-            if (keyLabel) keyLabel.textContent = 'Element name (key):';
-            if (contentFieldWrapper) contentFieldWrapper.classList.remove('hidden');
-            if (passwordPlainInput) {
-                passwordPlainInput.removeAttribute('required');
-                passwordPlainInput.classList.add('hidden');
-            }
-            if (passwordPlainTextarea) {
-                passwordPlainTextarea.setAttribute('required', 'required');
-                passwordPlainTextarea.classList.remove('hidden');
-            }
-        }
-        // Type 4: Folder
-        else if (selectedValue === '4') {
-            if (keyLabel) keyLabel.textContent = 'Folder name:';
-            if (contentFieldWrapper) contentFieldWrapper.classList.add('hidden');
-            if (passwordPlainInput) {
-                passwordPlainInput.removeAttribute('required');
-            }
-            if (passwordPlainTextarea) {
-                passwordPlainTextarea.removeAttribute('required');
-                passwordPlainTextarea.classList.add('hidden');
-            }
-        }
-    }
+        [fileFormGroup, contentFieldWrapper, passwordPlainInput, passwordPlainTextarea].forEach(el => el?.classList.add('hidden'));
+        [passwordPlainInput, passwordPlainTextarea, fileInput].forEach(el => el?.removeAttribute('required'));
 
-    // Initialize form fields
-    if (elementTypeSelect) {
-        updateFormFields();
-        elementTypeSelect.addEventListener('change', updateFormFields);
-    }
+        if (selectedValue === '1') { // Password
+            if (keyLabel) keyLabel.textContent = 'Element name (key):';
+            contentFieldWrapper?.classList.remove('hidden');
+            passwordPlainInput?.classList.remove('hidden');
+            passwordPlainInput?.setAttribute('required', 'required');
+        } else if (selectedValue === '2') { // Text
+            if (keyLabel) keyLabel.textContent = 'Element name (key):';
+            contentFieldWrapper?.classList.remove('hidden');
+            passwordPlainTextarea?.classList.remove('hidden');
+            passwordPlainTextarea?.setAttribute('required', 'required');
+        } else if (selectedValue === '3') { // File
+            if (keyLabel) keyLabel.textContent = 'File name (key):';
+            fileFormGroup?.classList.remove('hidden');
+            fileInput?.setAttribute('required', 'required');
+        } else if (selectedValue === '4') { // Folder
+            if (keyLabel) keyLabel.textContent = 'Folder name (key):';
+        }
+    };
 
-    // Navigate through folders - Rows
-    const rows = document.querySelectorAll('tbody tr[data-href]');
-    rows.forEach(row => {
-        row.addEventListener('click', function(event) {
-            if (event.target.closest('.action-buttons-cell')) {
-                return;
-            }
-            const url = this.dataset.href;
-            if (url) {
-                window.location.href = url;
-            }
-        });
+    fileInput?.addEventListener("change", () => {
+        if (fileInput.files.length > 0) {
+            fileNameDisplay.textContent = fileInput.files[0].name;
+            fileNameDisplay.classList.remove("text-gray-400");
+            fileNameDisplay.classList.add("text-gray-800");
+        } else {
+            fileNameDisplay.textContent = "No file chosen";
+            fileNameDisplay.classList.remove("text-gray-800");
+            fileNameDisplay.classList.add("text-gray-400");
+        }
     });
 
-    // Navigate through folders - Cards
-    const folderCards = document.querySelectorAll('.folder-card[data-href]');
-    folderCards.forEach(card => {
-        card.addEventListener('click', function(event) {
-            if (event.target.closest('.action-buttons-card')) {
-                return;
-            }
-            const url = this.dataset.href;
-            if (url) {
-                window.location.href = url;
-            }
-        });
-    });
+    elementTypeSelect?.addEventListener('change', updateFormFields);
+    updateFormFields(); // Initial call to set form state
 });

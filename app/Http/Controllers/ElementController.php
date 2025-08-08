@@ -77,8 +77,8 @@ class ElementController extends Controller
    
         try {
             switch($request->element_type_id) {
-                case 1:
-                case 2:
+                case 1: // Password
+                case 2: // Text
                     $request->validate([
                         'key' => 'required|string|max:255',
                         'passwordEncrypted' => 'required|string',
@@ -88,7 +88,17 @@ class ElementController extends Controller
                         'iterations' => 'required|integer',
                     ]);
                     break;                
-                case 4:
+                case 3: // File
+                    $request->validate([
+                        'key' => 'required|string|max:255',
+                        'file' => 'required|file',
+                        'file_iv' => 'required|string',
+                        'file_salt' => 'required|string',
+                        'file_hmac' => 'required|string',
+                        'iterations' => 'required|integer',
+                    ]);
+                    break;
+                case 4: // Folder
                     $request->validate([
                         'key' => 'required|string|max:255',
                     ]); 
@@ -97,42 +107,56 @@ class ElementController extends Controller
                     return redirect()->route('account.elements')->with('error', 'Invalid element type.');
             }
         } catch (\Exception $e) {
-//dd($e);            
             return redirect()->route('account.elements')->with('error', 'Error adding element: ' . $e->getMessage());
         }
 
-        // Create the element
+        $element = new Element();
+        $element->uuid = Str::uuid();
+        $element->key = $request->key;
+        $element->user_id = $request->user()->id;
+        $element->element_type_id = $request->element_type_id;
+        $element->parent = $request->parent;
+        $element->iterations = $request->iterations ?? 0;
+
         switch($request->element_type_id) {
-            case 1:
-            case 2:
-                $element = new Element();
-                $element->uuid = Str::uuid();
-                $element->key = $request->key;
+            case 1: // Password
+            case 2: // Text
                 $element->content = $request->passwordEncrypted;
                 $element->iv = $request->iv;
                 $element->salt = $request->salt;
                 $element->hmac = $request->hmac;
-                $element->user_id = $request->user()->id;
-                $element->element_type_id = $request->element_type_id;
-                $element->parent = $request->parent;
-                $element->iterations = $request->iterations;
-                $element->save();
                 break;
-            case 4: 
-                $element = new Element();
-                $element->uuid = Str::uuid();
-                $element->key = $request->key;
+                
+            case 3: // File
+                // Store the encrypted file
+                $file = $request->file('file');
+                $path = $file->storeAs(
+                    'private/files/' . $request->user()->id,
+                    $element->uuid . '.bin',
+                    'local'
+                );
+                
+                // Store file metadata
+                $element->file_path = $path;
+                $element->file_name = $file->getClientOriginalName();
+                $element->file_size = $file->getSize();
+                $element->file_mime = $file->getMimeType();
+                $element->iv = $request->file_iv;
+                $element->salt = $request->file_salt;
+                $element->hmac = $request->file_hmac;
+                $element->content = ''; // No content for files, stored separately
+                break;
+                
+            case 4: // Folder
                 $element->content = "";
                 $element->iv = "";
                 $element->salt = "";
                 $element->hmac = "";
-                $element->user_id = $request->user()->id;
-                $element->element_type_id = 4;
-                $element->parent = $request->parent;
                 $element->iterations = 0;
-                $element->save();
                 break;
         }
+        
+        $element->save();
 
         return redirect()->route('account.elements', ['uuid' => $request->parent]);
     }
@@ -143,10 +167,10 @@ class ElementController extends Controller
         // We delete element data from database (only if it belongs to current user)
         $element = Element::find($uuid);
         if ($element->user_id !== $request->user()->id) {
-
+            $log = new Log();
             $log->user_id = $request->user()->id;
             $log->action = 'delete';
-            $log->loggable_type = 'App\Models\Element';
+            $log->loggable_type = 'App\\Models\\Element';
             $log->loggable_id = $uuid;
             $logData = [
                 'message' => "Unauthorized deletion of element $uuid",
@@ -161,14 +185,104 @@ class ElementController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // If this is a file element, delete the physical file first
+        if ($element->element_type_id === 3 && !empty($element->file_path)) {
+            // Delete the file using Laravel's Storage facade
+            if (\Illuminate\Support\Facades\Storage::disk('local')->exists($element->file_path)) {
+                \Illuminate\Support\Facades\Storage::disk('local')->delete($element->file_path);
+                
+                // Log the file deletion
+                $log = new Log();
+                $log->user_id = $request->user()->id;
+                $log->action = 'delete_file';
+                $log->loggable_type = 'App\\Models\\Element';
+                $log->loggable_id = $uuid;
+                $log->ip_address = $request->ip();
+                $log->user_agent = $request->userAgent();
+                $log->data = json_encode([
+                    'file_path' => $element->file_path,
+                    'file_name' => $element->file_name,
+                    'file_size' => $element->file_size
+                ]);
+                $log->save();
+            }
+        }
 
-        $element = Element::find($uuid);
+        // Delete the database record
         $element->delete();
-        return redirect()->route('account.elements')->with('success', 'Element removed.');;
+        
+        return redirect()->route('account.elements')->with('success', 'Element removed.');
     }
 
+    /**
+     * Download an encrypted file
+     */
+    public function downloadFile(Request $request, $uuid)
+    {
+        $element = Element::findOrFail($uuid);
+        
+        // Check if the element belongs to the current user
+        if ($element->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized');
+        }
+        
+        // Check if the element is a file
+        if ($element->element_type_id !== 3 || !$element->file_path) {
+            abort(404, 'File not found');
+        }
+        
+        // Get the file path
+        $path = storage_path('app/' . $element->file_path);
+        
+        if (!file_exists($path)) {
+            abort(404, 'File not found on server');
+        }
+        
+        // Log the file download
+        $log = new Log();
+        $log->user_id = $request->user()->id;
+        $log->action = 'download';
+        $log->loggable_type = 'App\\Models\\Element';
+        $log->loggable_id = $uuid;
+        $log->ip_address = $request->ip();
+        $log->user_agent = $request->userAgent();
+        $log->data = json_encode([
+            'file_name' => $element->file_name,
+            'file_size' => $element->file_size,
+            'file_mime' => $element->file_mime
+        ]);
+        $log->save();
+        
+        // Return the file for download
+        return response()->download($path, $element->file_name, [
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="' . $element->file_name . '"',
+            'X-File-Name' => $element->file_name,
+            'X-File-Size' => $element->file_size,
+            'X-File-Mime' => $element->file_mime,
+            'X-File-IV' => $element->iv,
+            'X-File-Salt' => $element->salt,
+            'X-File-Hmac' => $element->hmac,
+            'X-File-Iterations' => $element->iterations,
+        ]);
+    }
+    
+    /**
+     * Get element data (for passwords and text)
+     */
     public function get(Request $request, $uuid) 
     {
+        $element = Element::findOrFail($uuid);
+        
+        // Check if the element belongs to the current user
+        if ($element->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized');
+        }
+        
+        // Check if the element is a file (should be handled by downloadFile)
+        if ($element->element_type_id === 3) {
+            abort(400, 'Use the download endpoint for files');
+        }
 
         // We log the access to the element
         $log = new Log();
@@ -201,8 +315,14 @@ class ElementController extends Controller
 
             return response()->json(['error' => 'Unauthorized'], 403);
         }
-        // We print it in JSON
-        return response()->json($element);
+        // We return a custom JSON response that matches the client's expectations
+        return response()->json([
+            'password' => $element->content,
+            'iv' => $element->iv,
+            'salt' => $element->salt,
+            'hmac' => $element->hmac,
+            'iterations' => $element->iterations
+        ]);
     }
 
 

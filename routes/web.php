@@ -40,6 +40,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/myaccount/elements/store', [ElementController::class, 'store'])->name('elements.store');
         Route::delete('/myaccount/elements/{id}', [ElementController::class, 'delete'])->name('elements.delete');
         Route::get('/myaccount/elements/get/{uuid}', [ElementController::class, 'get'])->name('elements.get')->middleware('throttle:get-element');
+        Route::get('/myaccount/elements/download/{uuid}', [ElementController::class, 'downloadFile'])->name('element.file.download')->middleware('throttle:download-file');
 
         // Logs
         Route::get('/myaccount/logs', [LogController::class, 'index'])->name('logs.index');

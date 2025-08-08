@@ -87,6 +87,9 @@
                                         @case(2)
                                             <i class="fas fa-file-alt text-gray-500 mr-2"></i>
                                             @break
+                                        @case(3)
+                                            <i class="fas fa-file text-green-500 mr-2"></i>
+                                            @break
                                         @case(4)
                                             <i class="fas fa-folder text-blue-500 mr-2"></i>
                                             @break
@@ -118,12 +121,20 @@
                                     {{ $element->updated_at->format('d/m/Y H:i') }}
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap text-right text-sm font-medium action-buttons-cell">                           
-                                    @if ($element->element_type_id !== 4)
+                                    @if($element->element_type_id == 1 || $element->element_type_id == 2)
                                     <button type="button"
-                                            data-id="{{ $element->uuid }}"
+                                            data-uuid="{{ $element->uuid }}"
+                                            data-key="{{ $element->key }}"
                                             data-type="{{ $element->element_type_id }}"
                                             class="text-blue-600 hover:text-blue-900 view-button p-1 rounded-full hover:bg-blue-100 transition duration-150 ease-in-out">
                                         <i class="fas fa-eye"></i>
+                                    </button>
+                                    @elseif($element->is_file)
+                                    <button type="button"
+                                            data-uuid="{{ $element->uuid }}"
+                                            data-key="{{ $element->key }}"
+                                            class="download-button text-green-600 hover:text-green-900 p-1 rounded-full hover:bg-green-100 transition duration-150 ease-in-out">
+                                        <i class="fas fa-download"></i>
                                     </button>
                                     @endif
                                     @if ( (($element->has_children == 0) && ($element->element_type_id == 4))
@@ -198,20 +209,29 @@
                             <div class="text-sm text-gray-600 mb-3">
                                 <span class="font-semibold">Last Modified:</span> {{ $element->updated_at->format('d/m/Y H:i') }}
                             </div>
-                            <div class="flex justify-end space-x-2 action-buttons-card"> {{-- Nueva clase para la celda de botones --}}
-                                @if ($element->element_type_id !== 4) {{-- Los elementos que no son carpetas tienen botón de "View" --}}
+                            <div class="flex justify-end space-x-2 action-buttons-card">
+                                @if($element->is_password || $element->is_text)
                                 <button type="button"
-                                        data-id="{{ $element->uuid }}"
+                                        data-uuid="{{ $element->uuid }}"
+                                        data-key="{{ $element->key }}"
                                         data-type="{{ $element->element_type_id }}"
                                         class="text-blue-600 hover:text-blue-900 view-button px-3 py-1 rounded-md hover:bg-blue-100 transition duration-150 ease-in-out text-sm"
-                                        onclick="event.stopPropagation()"> {{-- Detener propagación --}}
+                                        onclick="event.stopPropagation()">
                                     <i class="fas fa-eye"></i> View
+                                </button>
+                                @elseif($element->is_file)
+                                <button type="button"
+                                        data-uuid="{{ $element->uuid }}"
+                                        data-key="{{ $element->key }}"
+                                        class="download-button text-green-600 hover:text-green-900 px-3 py-1 rounded-md hover:bg-green-100 transition duration-150 ease-in-out text-sm"
+                                        onclick="event.stopPropagation()">
+                                    <i class="fas fa-download"></i> Download
                                 </button>
                                 @endif
                                 <button type="button"
                                         data-id="{{ $element->uuid }}"
                                         class="text-red-600 hover:text-red-900 delete-button px-3 py-1 rounded-md hover:bg-red-100 transition duration-150 ease-in-out text-sm"
-                                        onclick="event.stopPropagation()"> {{-- Detener propagación --}}
+                                        onclick="event.stopPropagation()">
                                     <i class="fas fa-trash-alt"></i> Delete
                                 </button>
                             </div>
@@ -229,21 +249,35 @@
     </div>
         <div class="bg-white shadow-md rounded-lg p-6 mb-6">
             <h1 class="text-3xl font-bold mb-4 text-gray-800">Add New Element</h1>
-            <form id="elementForm" action="{{ route('elements.store') }}" method="POST">
+            <form id="elementForm" action="{{ route('elements.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="mb-4">
                     <label for="element_type_id" class="block text-gray-700 text-sm font-bold mb-2">Type:</label>
                     <select name="element_type_id" id="element_type_id" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
                         <option value="1" selected>Password</option>
                         <option value="2">Text</option>
+                        <option value="3">File</option>
                         <option value="4">Folder</option>
                     </select>
                 </div>
                 <div class="mb-4">
-                    <label for="key" id="keyLabel" class="block text-gray-700 text-sm font-bold mb-2">Element name (key):</label>
-                    <input type="text" name="key" id="key" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                     <label for="key" id="keyLabel" class="block text-gray-700 text-sm font-bold mb-2">Element name (key):</label>
+                     <input type="text" name="key" id="key" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
+                 </div>
+                
+                <!-- File Upload Field -->
+                <div class="mb-4 hidden" id="fileFormGroup">
+                    <label for="fileInput" class="block text-gray-700 text-sm font-bold mb-2">Select File:</label>
+                    <div class="flex items-center">
+                        <label class="flex flex-col items-center px-4 py-2 bg-white text-blue-500 rounded-lg border border-blue-500 cursor-pointer hover:bg-blue-50">
+                            <span class="text-sm">Choose File</span>
+                            <input type="file" id="fileInput" name="file" class="hidden">
+                        </label>
+                        <span id="fileNameDisplay" class="ml-3 text-sm text-gray-600">No file selected</span>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Files are encrypted client-side before upload</p>
                 </div>
-                <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
+                 <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
                     <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold mb-2">Content:</label>
                     <input type="text" id="passwordPlain" name="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
                     <textarea id="passwordPlainTextarea" name="passwordPlainTextarea" class="shadow border rounded w-full py-2 px-3 text-gray-700 hidden" rows="5"></textarea>
@@ -348,7 +382,7 @@
                 
                 <div id="countdown" class="mt-2 text-sm text-gray-500"></div>
 
-                <button onclick="closeModal()" class="mt-4 text-sm text-red-500 hover:underline">Close</button>
+                <button type="button" class="close-button mt-4 text-sm text-red-500 hover:underline">Close</button>
             </div>
         </div>
 
