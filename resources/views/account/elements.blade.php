@@ -308,7 +308,15 @@
                     <p class="mt-1 text-xs text-gray-500">Files are encrypted client-side before upload</p>
                 </div>
                  <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
-                    <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold mb-2">Content:</label>
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold">Content:</label>
+                        <div id="passwordGeneratorContainer" class="flex items-center space-x-2" style="display: none;">
+                            <input type="number" id="passwordLength" min="8" max="100" value="20" class="w-16 px-2 py-1 border rounded text-sm" placeholder="Length">
+                            <button type="button" id="generatePasswordBtn" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-300">
+                                <i class="fas fa-key mr-1"></i>Generate
+                            </button>
+                        </div>
+                    </div>
                     <div class="relative">
                         <input type="password" id="passwordPlain" name="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700 pr-10" required>
                         <button type="button" id="togglePasswordVisibility" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">

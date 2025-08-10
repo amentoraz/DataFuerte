@@ -274,10 +274,15 @@ document.addEventListener('DOMContentLoaded', function () {
     copyPasswordBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordInput.value, copyPasswordBtn));
     copyPasswordTextareaBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordTextarea.value, copyPasswordTextareaBtn));
 
-    // --- Password Visibility Toggle ---
+    // --- Password Generator ---
     const togglePasswordBtn = document.getElementById('togglePasswordVisibility');
     const passwordInput = document.getElementById('passwordPlain');
+    const passwordGeneratorContainer = document.getElementById('passwordGeneratorContainer');
+    const generatePasswordBtn = document.getElementById('generatePasswordBtn');
+    const passwordLengthInput = document.getElementById('passwordLength');
+    // elementTypeSelect is already declared at the top of the file
     
+    // Toggle password visibility
     if (togglePasswordBtn && passwordInput) {
         togglePasswordBtn.addEventListener('click', () => {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -290,6 +295,71 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+    
+    // Generate a secure password
+    function generateSecurePassword(length = 20) {
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const numbers = '0123456789';
+        const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+        
+        // Ensure at least one character from each set
+        let password = [
+            lower[Math.floor(Math.random() * lower.length)],
+            upper[Math.floor(Math.random() * upper.length)],
+            numbers[Math.floor(Math.random() * numbers.length)],
+            symbols[Math.floor(Math.random() * symbols.length)]
+        ];
+        
+        // Fill the rest with random characters from all sets
+        const allChars = lower + upper + numbers + symbols;
+        for (let i = password.length; i < length; i++) {
+            password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+        }
+        
+        // Shuffle the password array
+        for (let i = password.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [password[i], password[j]] = [password[j], password[i]];
+        }
+        
+        return password.join('');
+    }
+    
+    // Handle password generation
+    if (generatePasswordBtn && passwordInput && passwordLengthInput) {
+        generatePasswordBtn.addEventListener('click', () => {
+            const length = parseInt(passwordLengthInput.value) || 20;
+            const password = generateSecurePassword(Math.max(8, Math.min(100, length)));
+            passwordInput.value = password;
+            
+            // Trigger input event to update any listeners
+            const event = new Event('input', { bubbles: true });
+            passwordInput.dispatchEvent(event);
+        });
+    }
+    
+    // Toggle password generator visibility based on element type
+    function togglePasswordGenerator() {
+        const isPasswordType = elementTypeSelect?.value === '1'; // 1 is the value for password type
+        if (passwordGeneratorContainer) {
+            passwordGeneratorContainer.style.display = isPasswordType ? 'flex' : 'none';
+        }
+        // Toggle password visibility button
+        if (togglePasswordBtn) {
+            togglePasswordBtn.style.display = isPasswordType ? 'block' : 'none';
+        }
+        // Toggle input type
+        if (passwordInput) {
+            passwordInput.type = isPasswordType ? 'password' : 'text';
+        }
+    }
+    
+    // Initialize password generator visibility
+    togglePasswordGenerator();
+    
+    // Update visibility when element type changes
+    elementTypeSelect?.addEventListener('change', togglePasswordGenerator);
     
     // --- Folder Navigation ---
     document.querySelectorAll('tbody tr[data-href], .folder-card[data-href]').forEach(item => {
