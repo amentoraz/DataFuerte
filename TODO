@@ -3,7 +3,8 @@
 
 * CSP headers and other security mechanisms.
 * Multiple accounts support & management.
-* Review things that are logged.
+* Password size standard (default=20) should be set in configuration
+* General review of things that are logged by the platform.
 
 * Move an element to a folder, drag&drop.
 * Automatic installation script.
