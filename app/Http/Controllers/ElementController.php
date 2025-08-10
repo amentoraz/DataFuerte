@@ -346,6 +346,40 @@ class ElementController extends Controller
         ]);
     }
 
+    /**
+     * Update the specified element's key.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @return \Illuminate\Http\Response
+     */
+    public function updateKey(Request $request, $uuid)
+    {
+        $request->validate([
+            'key' => 'required|string|max:255',
+        ]);
 
+        $element = Element::where('uuid', $uuid)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
 
+        $element->key = $request->key;
+        $element->save();
+
+        // Log the action
+        Log::create([
+            'user_id' => $request->user()->id,
+            'action' => 'update',
+            'description' => 'Updated element name to: ' . $request->key,
+            'ip_address' => $request->ip(),
+            'loggable_type' => 'App\Models\Element',
+            'loggable_id' => $uuid
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Element name updated successfully',
+            'new_key' => $element->key
+        ]);
+    }
 }

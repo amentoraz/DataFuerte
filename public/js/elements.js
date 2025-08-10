@@ -274,6 +274,106 @@ document.addEventListener('DOMContentLoaded', function () {
     copyPasswordBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordInput.value, copyPasswordBtn));
     copyPasswordTextareaBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordTextarea.value, copyPasswordTextareaBtn));
 
+    // --- Inline Edit for Element Names ---
+    document.querySelectorAll('.edit-name-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const container = this.closest('.inline-edit-container');
+            const nameSpan = container.querySelector('.element-name');
+            const editForm = container.querySelector('.edit-name-form');
+            
+            // Hide the name and show the form
+            nameSpan.classList.add('hidden');
+            this.classList.add('hidden');
+            editForm.classList.remove('hidden');
+            
+            // Focus the input field
+            const input = editForm.querySelector('input');
+            input.focus();
+            input.select();
+        });
+    });
+
+    // Handle form submission with AJAX
+    document.querySelectorAll('.edit-name-form').forEach(form => {
+        // Prevent click events from bubbling up to the row
+        form.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        // Also prevent clicks on the input and button from bubbling
+        const input = form.querySelector('input[name="name"]');
+        const submitButton = form.querySelector('button[type="submit"]');
+        
+        if (input) input.addEventListener('click', e => e.stopPropagation());
+        if (submitButton) submitButton.addEventListener('click', e => e.stopPropagation());
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const container = this.closest('.inline-edit-container');
+            const nameSpan = container.querySelector('.element-name');
+            const editButton = container.querySelector('.edit-name-btn');
+            const input = this.querySelector('input[name="name"]');
+            const uuid = this.dataset.uuid;
+            const csrfToken = this.querySelector('input[name="_token"]').value;
+            
+            // Show loading state
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalButtonHtml = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Send AJAX request
+            fetch(`/myaccount/elements/update-key/${uuid}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    key: input.value.trim()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the displayed name
+                    nameSpan.textContent = data.new_key;
+                    // Show success message
+                    //showAlert('Element name updated successfully', 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to update element name');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert(error.message || 'An error occurred while updating the element name', 'error');
+                // Reset input to the original value
+                input.value = nameSpan.textContent;
+            })
+            .finally(() => {
+                // Hide the form and show the name + edit button
+                this.classList.add('hidden');
+                nameSpan.classList.remove('hidden');
+                editButton.classList.remove('hidden');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonHtml;
+            });
+        });
+    });
+    
+    // Helper function to show alerts
+    function showAlert(message, type = 'success') {
+        // You can implement a proper notification system here
+        alert(`${type.toUpperCase()}: ${message}`);
+    }
+
     // --- Password Generator ---
     const togglePasswordBtn = document.getElementById('togglePasswordVisibility');
     const passwordInput = document.getElementById('passwordPlain');

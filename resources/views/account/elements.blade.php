@@ -117,7 +117,23 @@
                                             <i class="fas fa-folder text-blue-500 mr-2"></i>
                                             @break
                                     @endswitch
-                                    {{ $element->key }}
+                                    <div class="inline-edit-container">
+                                        <span class="element-name">{{ $element->key }}</span>
+                                        @if(!($element->element_type_id == 4 && $element->key === '../'))
+                                        <button type="button" class="text-gray-400 hover:text-gray-600 ml-2 edit-name-btn">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        @endif
+                                        <form action="#" method="POST" class="edit-name-form hidden" data-uuid="{{ $element->uuid }}">
+                                            @csrf
+                                            <div class="flex items-center">
+                                                <input type="text" name="name" value="{{ $element->key }}" class="border rounded px-2 py-1 text-sm" required>
+                                                <button type="submit" class="ml-2 text-green-500 hover:text-green-700">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
                                     @switch($element->element_type_id)
