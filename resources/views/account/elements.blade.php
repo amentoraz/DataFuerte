@@ -43,8 +43,31 @@
             </div>
         @endif
 
-        
+        <!-- Search Form -->
+        <div class="mb-6">
+            <form action="{{ route('account.elements', ['uuid' => $uuid ?? '0']) }}" method="GET" class="flex gap-2">
+                <input type="text" 
+                       name="search" 
+                       value="{{ request('search') }}" 
+                       placeholder="Buscar por nombre..." 
+                       class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Buscar
+                </button>
+                @if(request()->has('search'))
+                    <a href="{{ route('account.elements', ['uuid' => $uuid ?? '0']) }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                        Limpiar
+                    </a>
+                @endif
+            </form>
+        </div>
+
+        @if(!request()->has('search'))
             <h4 class="text-md font-bold mb-4 text-gray-800">Current Directory: {{ $currentDirectory }}</h4>
+        @else
+            <h4 class="text-md font-bold mb-4 text-gray-800">Resultados de búsqueda para: "{{ request('search') }}"</h4>
+        @endif
         
 
         @if ($elements->isEmpty())
