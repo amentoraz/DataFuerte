@@ -274,6 +274,23 @@ document.addEventListener('DOMContentLoaded', function () {
     copyPasswordBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordInput.value, copyPasswordBtn));
     copyPasswordTextareaBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordTextarea.value, copyPasswordTextareaBtn));
 
+    // --- Password Visibility Toggle ---
+    const togglePasswordBtn = document.getElementById('togglePasswordVisibility');
+    const passwordInput = document.getElementById('passwordPlain');
+    
+    if (togglePasswordBtn && passwordInput) {
+        togglePasswordBtn.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Toggle eye icon
+            const icon = togglePasswordBtn.querySelector('i');
+            if (icon) {
+                icon.className = type === 'password' ? 'far fa-eye' : 'far fa-eye-slash';
+            }
+        });
+    }
+    
     // --- Folder Navigation ---
     document.querySelectorAll('tbody tr[data-href], .folder-card[data-href]').forEach(item => {
         item.addEventListener('click', function (event) {

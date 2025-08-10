@@ -1,15 +1,15 @@
 
 ⚙️ TODO
 
-* Multiple accounts support & management
 * Rename an element, specially folders
+* Secure password generator on demand - button to generate a password when creating a password element.
 * Move an element to a folder, drag&drop.
+
+* CSP headers and other security mechanisms.
+* Multiple accounts support & management
 * Automatic installation script.
 * Multi-language support.
-* Secure password generator on demand.
 * Recommendations on Master Key creation (length, etc). Since it MUST be written everytime content is decrypted, now by design you can use different Master Keys. Probably this is a good idea.
 * If several algorithms are considered, they might be chosen in the general configuration and/or for each content.
 * File tags for the three kinds of content, to allow further organization.
-* CSP headers and other security mechanisms.
 * Fully APIfy the system to allow external clients for those who don't want to use the current frontend (?)
-* Password type should have password input type when adding (?)
