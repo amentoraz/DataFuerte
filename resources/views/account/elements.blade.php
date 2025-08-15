@@ -180,7 +180,7 @@
                                         <i class="fas fa-download"></i>
                                     </button>
                                     @endif
-                                    @if ( (($element->has_children == 0) && ($element->element_type_id == 4))
+                                    @if ( (($element->has_children == 0) && ($element->element_type_id == 4) && ($element->key !== '../'))
                                           || ($element->element_type_id != 4))
                                     <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');">
                                         @csrf
@@ -271,7 +271,7 @@
                                 <span class="font-semibold">Last Modified:</span> {{ $element->updated_at->format('d/m/Y H:i') }}
                             </div>
                             <div class="flex justify-end space-x-2 action-buttons-card">
-                                @if($element->is_password || $element->is_text)
+                                @if($element->element_type_id == 1 || $element->element_type_id == 2)                                
                                 <button type="button"
                                         data-uuid="{{ $element->uuid }}"
                                         data-key="{{ $element->key }}"
@@ -289,6 +289,8 @@
                                     <i class="fas fa-download"></i> Download
                                 </button>
                                 @endif
+                                @if ( (($element->has_children == 0) && ($element->element_type_id == 4) && ($element->key !== '../'))
+                                          || ($element->element_type_id != 4))
                                 <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');" onclick="event.stopPropagation(); event.stopImmediatePropagation();">
                                     @csrf
                                     @method('DELETE')
@@ -298,6 +300,7 @@
                                         <i class="fas fa-trash-alt"></i> Delete
                                     </button>
                                 </form>
+                                @endif
                             </div>
                         </div>
                     @endforeach

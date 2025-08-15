@@ -1,12 +1,12 @@
 
 ⚙️ TODO
 
+* CHANGELOG file reviewing all changes with each release.
 * CSP headers and other security mechanisms.
 * Multiple accounts support & management.
-* Password size standard (default=20) should be set in configuration
+* Password size standard (default=20) should be set in configuration.
 * General review of things that are logged by the platform.
-
-* Move an element to a folder, drag&drop.
+* Move an element to a folder through drag&drop.
 * Automatic installation script.
 * Multi-language support.
 * If several algorithms are considered, they might be chosen in the general configuration and/or for each content.
