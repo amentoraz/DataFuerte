@@ -14,23 +14,36 @@ class ElementController extends Controller
 
     public function index(Request $request, $uuid = "0")
     {        
-       
         $elements_per_page = Configuration::where('user_id', $request->user()->id)->where('parameter', 'elements_per_page')->first();
         if (!$elements_per_page) {
             $elements_per_page = 10;
         } else {
             $elements_per_page = $elements_per_page->value;
         }
-        // Retrieve all elements related with current user
-        $elements = Element::where('user_id', $request->user()->id)
-            ->where('parent', $uuid)
-            ->orderBy('key', 'asc')
-            ->select('*') // Select all existing columns
+        
+        $search = $request->input('search');
+        
+        // Base query for elements
+        $query = Element::where('user_id', $request->user()->id);
+        
+        // Apply search filter if search term is provided
+        if ($search) {
+            $query->where('key', 'like', '%' . $search . '%');
+            // When searching, we want to search across all directories
+            $uuid = null;
+        } else {
+            // Only filter by parent if not searching
+            $query->where('parent', $uuid);
+        }
+        
+        // Get the elements with pagination
+        $elements = $query->orderBy('key', 'asc')
+            ->select('*')
             ->selectSub(function ($query) {
                 $query->select(DB::raw('count(*) > 0'))
                     ->from('elements as children')
                     ->whereColumn('children.parent', 'elements.uuid');
-            }, 'has_children') // Add a new column 'has_children'
+            }, 'has_children')
             ->paginate($elements_per_page);
 
         // If $uuid != 0, we are not in the root folder
@@ -333,6 +346,40 @@ class ElementController extends Controller
         ]);
     }
 
+    /**
+     * Update the specified element's key.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $uuid
+     * @return \Illuminate\Http\Response
+     */
+    public function updateKey(Request $request, $uuid)
+    {
+        $request->validate([
+            'key' => 'required|string|max:255',
+        ]);
 
+        $element = Element::where('uuid', $uuid)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
 
+        $element->key = $request->key;
+        $element->save();
+
+        // Log the action
+        Log::create([
+            'user_id' => $request->user()->id,
+            'action' => 'update',
+            'description' => 'Updated element name to: ' . $request->key,
+            'ip_address' => $request->ip(),
+            'loggable_type' => 'App\Models\Element',
+            'loggable_id' => $uuid
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Element name updated successfully',
+            'new_key' => $element->key
+        ]);
+    }
 }

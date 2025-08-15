@@ -1,16 +1,14 @@
 
 ⚙️ TODO
 
-* Search filters for passwords/texts/files, name search and tag search.
-* Multiple accounts support & management
-* Rename an element, specially folders
-* Move an element to a folder, drag&drop.
+* CHANGELOG file reviewing all changes with each release.
+* CSP headers and other security mechanisms.
+* Multiple accounts support & management.
+* Password size standard (default=20) should be set in configuration.
+* General review of things that are logged by the platform.
+* Move an element to a folder through drag&drop.
 * Automatic installation script.
 * Multi-language support.
-* Secure password generator on demand.
-* Recommendations on Master Key creation (length, etc). Since it MUST be written everytime content is decrypted, now by design you can use different Master Keys. Probably this is a good idea.
 * If several algorithms are considered, they might be chosen in the general configuration and/or for each content.
-* File tags for the three kinds of content, to allow further organization.
-* CSP headers and other security mechanisms.
+* Tags for the three kinds of content, to allow further organization.
 * Fully APIfy the system to allow external clients for those who don't want to use the current frontend (?)
-* Password type should have password input type when adding (?)

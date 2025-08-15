@@ -43,8 +43,35 @@
             </div>
         @endif
 
-        
+        <!-- Search Form -->
+        <div class="mb-6">
+            <form action="{{ route('account.elements', ['uuid' => $uuid ?? '0']) }}" method="GET">
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ request('search') }}" 
+                           placeholder="Search by name..." 
+                           class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                    <div class="flex gap-2">
+                        <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                            Search
+                        </button>
+                        @if(request()->has('search'))
+                            <a href="{{ route('account.elements', ['uuid' => $uuid ?? '0']) }}" class="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-center">
+                                Clear
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        @if(!request()->has('search'))
             <h4 class="text-md font-bold mb-4 text-gray-800">Current Directory: {{ $currentDirectory }}</h4>
+        @else
+            <h4 class="text-md font-bold mb-4 text-gray-800">Resultados de búsqueda para: "{{ request('search') }}"</h4>
+        @endif
         
 
         @if ($elements->isEmpty())
@@ -94,7 +121,23 @@
                                             <i class="fas fa-folder text-blue-500 mr-2"></i>
                                             @break
                                     @endswitch
-                                    {{ $element->key }}
+                                    <div class="inline-edit-container">
+                                        <span class="element-name">{{ $element->key }}</span>
+                                        @if(!($element->element_type_id == 4 && $element->key === '../'))
+                                        <button type="button" class="text-gray-400 hover:text-gray-600 ml-2 edit-name-btn">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        @endif
+                                        <form action="#" method="POST" class="edit-name-form hidden" data-uuid="{{ $element->uuid }}">
+                                            @csrf
+                                            <div class="flex items-center">
+                                                <input type="text" name="name" value="{{ $element->key }}" class="border rounded px-2 py-1 text-sm" required>
+                                                <button type="submit" class="ml-2 text-green-500 hover:text-green-700">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
                                     @switch($element->element_type_id)
@@ -137,7 +180,7 @@
                                         <i class="fas fa-download"></i>
                                     </button>
                                     @endif
-                                    @if ( (($element->has_children == 0) && ($element->element_type_id == 4))
+                                    @if ( (($element->has_children == 0) && ($element->element_type_id == 4) && ($element->key !== '../'))
                                           || ($element->element_type_id != 4))
                                     <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');">
                                         @csrf
@@ -178,15 +221,29 @@
                                     @case(4)
                                         <i class="fas fa-folder text-blue-500 mr-2 text-lg"></i>
                                         @break
-                                    {{-- Añade más casos aquí para otros tipos de elementos si los tienes --}}
-                                    @case(2)
-                                        <i class="fas fa-file-alt text-gray-500 mr-2 text-lg"></i> {{-- Ejemplo para tipo Text --}}
-                                        @break
                                     @case(3)
-                                        <i class="fas fa-file text-gray-500 mr-2 text-lg"></i> {{-- Ejemplo para tipo File --}}
+                                        <i class="fas fa-file text-gray-500 mr-2 text-lg"></i>
                                         @break
                                 @endswitch
-                                <span class="font-bold text-gray-800 text-base">{{ $element->key }}</span>
+                                <div class="inline-edit-container">
+                                    <div class="flex items-center">
+                                        <span class="element-name font-bold text-gray-800 text-base">{{ $element->key }}</span>
+                                        @if(!($element->element_type_id == 4 && $element->key === '../'))
+                                        <button type="button" class="text-gray-400 hover:text-gray-600 ml-2 edit-name-btn">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        @endif
+                                    </div>
+                                    <form action="#" method="POST" class="edit-name-form hidden mt-2" data-uuid="{{ $element->uuid }}">
+                                        @csrf
+                                        <div class="flex items-center">
+                                            <input type="text" name="name" value="{{ $element->key }}" class="border rounded px-2 py-1 text-sm w-full" required>
+                                            <button type="submit" class="ml-2 text-green-500 hover:text-green-700">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                             <div class="text-sm text-gray-600 mb-2">
                                 <span class="font-semibold">Type:</span>
@@ -214,7 +271,7 @@
                                 <span class="font-semibold">Last Modified:</span> {{ $element->updated_at->format('d/m/Y H:i') }}
                             </div>
                             <div class="flex justify-end space-x-2 action-buttons-card">
-                                @if($element->is_password || $element->is_text)
+                                @if($element->element_type_id == 1 || $element->element_type_id == 2)                                
                                 <button type="button"
                                         data-uuid="{{ $element->uuid }}"
                                         data-key="{{ $element->key }}"
@@ -232,6 +289,8 @@
                                     <i class="fas fa-download"></i> Download
                                 </button>
                                 @endif
+                                @if ( (($element->has_children == 0) && ($element->element_type_id == 4) && ($element->key !== '../'))
+                                          || ($element->element_type_id != 4))
                                 <form action="{{ route('elements.delete', $element->uuid) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this item?');" onclick="event.stopPropagation(); event.stopImmediatePropagation();">
                                     @csrf
                                     @method('DELETE')
@@ -241,6 +300,7 @@
                                         <i class="fas fa-trash-alt"></i> Delete
                                     </button>
                                 </form>
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -285,9 +345,22 @@
                     <p class="mt-1 text-xs text-gray-500">Files are encrypted client-side before upload</p>
                 </div>
                  <div class="mb-4" id="contentFieldWrapper"> {{-- Wrapper para ocultar/mostrar --}}
-                    <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold mb-2">Content:</label>
-                    <input type="text" id="passwordPlain" name="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700" required>
-                    <textarea id="passwordPlainTextarea" name="passwordPlainTextarea" class="shadow border rounded w-full py-2 px-3 text-gray-700 hidden" rows="5"></textarea>
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="passwordPlain" id="contentLabel" class="block text-gray-700 text-sm font-bold">Content:</label>
+                        <div id="passwordGeneratorContainer" class="flex items-center space-x-2" style="display: none;">
+                            <input type="number" id="passwordLength" min="8" max="100" value="20" class="w-16 px-2 py-1 border rounded text-sm" placeholder="Length">
+                            <button type="button" id="generatePasswordBtn" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-gray-300">
+                                <i class="fas fa-key mr-1"></i>Generate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <input type="password" id="passwordPlain" name="passwordPlain" class="shadow border rounded w-full py-2 px-3 text-gray-700 pr-10" required>
+                        <button type="button" id="togglePasswordVisibility" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none">
+                            <i class="far fa-eye"></i>
+                        </button>
+                    </div>
+                    <textarea id="passwordPlainTextarea" name="passwordPlainTextarea" class="shadow border rounded w-full py-2 px-3 text-gray-700 hidden mt-2" rows="5"></textarea>
                 </div>
 
                 {{-- Campos ocultos para la encriptación, siempre presentes para passwords --}}

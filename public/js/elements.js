@@ -274,6 +274,193 @@ document.addEventListener('DOMContentLoaded', function () {
     copyPasswordBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordInput.value, copyPasswordBtn));
     copyPasswordTextareaBtn?.addEventListener('click', () => copyToClipboard(() => secureDecryptedData?.getValue() || decryptedPasswordTextarea.value, copyPasswordTextareaBtn));
 
+    // --- Inline Edit for Element Names ---
+    document.querySelectorAll('.edit-name-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const container = this.closest('.inline-edit-container');
+            const nameSpan = container.querySelector('.element-name');
+            const editForm = container.querySelector('.edit-name-form');
+            
+            // Hide the name and show the form
+            nameSpan.classList.add('hidden');
+            this.classList.add('hidden');
+            editForm.classList.remove('hidden');
+            
+            // Focus the input field
+            const input = editForm.querySelector('input');
+            input.focus();
+            input.select();
+        });
+    });
+
+    // Handle form submission with AJAX
+    document.querySelectorAll('.edit-name-form').forEach(form => {
+        // Prevent click events from bubbling up to the row
+        form.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        
+        // Also prevent clicks on the input and button from bubbling
+        const input = form.querySelector('input[name="name"]');
+        const submitButton = form.querySelector('button[type="submit"]');
+        
+        if (input) input.addEventListener('click', e => e.stopPropagation());
+        if (submitButton) submitButton.addEventListener('click', e => e.stopPropagation());
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const container = this.closest('.inline-edit-container');
+            const nameSpan = container.querySelector('.element-name');
+            const editButton = container.querySelector('.edit-name-btn');
+            const input = this.querySelector('input[name="name"]');
+            const uuid = this.dataset.uuid;
+            const csrfToken = this.querySelector('input[name="_token"]').value;
+            
+            // Show loading state
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalButtonHtml = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Send AJAX request
+            fetch(`/myaccount/elements/update-key/${uuid}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    key: input.value.trim()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the displayed name
+                    nameSpan.textContent = data.new_key;
+                    // Show success message
+                    //showAlert('Element name updated successfully', 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to update element name');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert(error.message || 'An error occurred while updating the element name', 'error');
+                // Reset input to the original value
+                input.value = nameSpan.textContent;
+            })
+            .finally(() => {
+                // Hide the form and show the name + edit button
+                this.classList.add('hidden');
+                nameSpan.classList.remove('hidden');
+                editButton.classList.remove('hidden');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonHtml;
+            });
+        });
+    });
+    
+    // Helper function to show alerts
+    function showAlert(message, type = 'success') {
+        // You can implement a proper notification system here
+        alert(`${type.toUpperCase()}: ${message}`);
+    }
+
+    // --- Password Generator ---
+    const togglePasswordBtn = document.getElementById('togglePasswordVisibility');
+    const passwordInput = document.getElementById('passwordPlain');
+    const passwordGeneratorContainer = document.getElementById('passwordGeneratorContainer');
+    const generatePasswordBtn = document.getElementById('generatePasswordBtn');
+    const passwordLengthInput = document.getElementById('passwordLength');
+    // elementTypeSelect is already declared at the top of the file
+    
+    // Toggle password visibility
+    if (togglePasswordBtn && passwordInput) {
+        togglePasswordBtn.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Toggle eye icon
+            const icon = togglePasswordBtn.querySelector('i');
+            if (icon) {
+                icon.className = type === 'password' ? 'far fa-eye' : 'far fa-eye-slash';
+            }
+        });
+    }
+    
+    // Generate a secure password
+    function generateSecurePassword(length = 20) {
+        const lower = 'abcdefghijklmnopqrstuvwxyz';
+        const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const numbers = '0123456789';
+        const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+        
+        // Ensure at least one character from each set
+        let password = [
+            lower[Math.floor(Math.random() * lower.length)],
+            upper[Math.floor(Math.random() * upper.length)],
+            numbers[Math.floor(Math.random() * numbers.length)],
+            symbols[Math.floor(Math.random() * symbols.length)]
+        ];
+        
+        // Fill the rest with random characters from all sets
+        const allChars = lower + upper + numbers + symbols;
+        for (let i = password.length; i < length; i++) {
+            password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+        }
+        
+        // Shuffle the password array
+        for (let i = password.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [password[i], password[j]] = [password[j], password[i]];
+        }
+        
+        return password.join('');
+    }
+    
+    // Handle password generation
+    if (generatePasswordBtn && passwordInput && passwordLengthInput) {
+        generatePasswordBtn.addEventListener('click', () => {
+            const length = parseInt(passwordLengthInput.value) || 20;
+            const password = generateSecurePassword(Math.max(8, Math.min(100, length)));
+            passwordInput.value = password;
+            
+            // Trigger input event to update any listeners
+            const event = new Event('input', { bubbles: true });
+            passwordInput.dispatchEvent(event);
+        });
+    }
+    
+    // Toggle password generator visibility based on element type
+    function togglePasswordGenerator() {
+        const isPasswordType = elementTypeSelect?.value === '1'; // 1 is the value for password type
+        if (passwordGeneratorContainer) {
+            passwordGeneratorContainer.style.display = isPasswordType ? 'flex' : 'none';
+        }
+        // Toggle password visibility button
+        if (togglePasswordBtn) {
+            togglePasswordBtn.style.display = isPasswordType ? 'block' : 'none';
+        }
+        // Toggle input type
+        if (passwordInput) {
+            passwordInput.type = isPasswordType ? 'password' : 'text';
+        }
+    }
+    
+    // Initialize password generator visibility
+    togglePasswordGenerator();
+    
+    // Update visibility when element type changes
+    elementTypeSelect?.addEventListener('change', togglePasswordGenerator);
+    
     // --- Folder Navigation ---
     document.querySelectorAll('tbody tr[data-href], .folder-card[data-href]').forEach(item => {
         item.addEventListener('click', function (event) {
